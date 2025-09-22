@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'blocs/auth/auth_bloc.dart';
+import 'blocs/auth/auth_state.dart'; // Add this import
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
@@ -11,16 +12,8 @@ void main() {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<AuthBloc>(
-          create: (context) => AuthBloc(),
-        ),
-        // Add more BLoCs here in the future:
-        // BlocProvider<VocabularyBloc>(
-        //   create: (context) => VocabularyBloc(),
-        // ),
-      ],
+    return BlocProvider(
+      create: (context) => AuthBloc(),
       child: MaterialApp(
         title: 'Children Vocabulary App',
         theme: ThemeData(
