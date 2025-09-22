@@ -11,7 +11,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onLogin(AuthLogin event, Emitter<AuthState> emit) async {
-    emit(AuthLoadingState());
+    emit(AuthLoading());
 
     try {
       // Simulate login API call
@@ -24,17 +24,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           'name': 'Demo User',
           'email': event.email,
         };
-        emit(AuthenticatedState(user: mockUser, token: 'demo_token'));
+        emit(AuthAuthenticated(user: mockUser, token: 'demo_token'));
       } else {
-        emit(AuthErrorState(message: 'Please enter valid credentials'));
+        emit(AuthError(message: 'Please enter valid credentials'));
       }
     } catch (e) {
-      emit(AuthErrorState(message: e.toString()));
+      emit(AuthError(message: e.toString()));
     }
   }
 
   Future<void> _onRegister(AuthRegister event, Emitter<AuthState> emit) async {
-    emit(AuthLoadingState());
+    emit(AuthLoading());
 
     try {
       // Simulate registration API call
@@ -50,12 +50,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           'email': event.email,
           'age': event.age,
         };
-        emit(AuthenticatedState(user: mockUser, token: 'demo_token'));
+        emit(AuthAuthenticated(user: mockUser, token: 'demo_token'));
       } else {
-        emit(AuthErrorState(message: 'Please fill in all fields'));
+        emit(AuthError(message: 'Please fill in all fields'));
       }
     } catch (e) {
-      emit(AuthErrorState(message: e.toString()));
+      emit(AuthError(message: e.toString()));
     }
   }
 
@@ -84,7 +84,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         'name': 'Demo User',
         'email': 'demo@example.com',
       };
-      emit(AuthenticatedState(user: mockUser, token: 'demo_token'));
+      emit(AuthAuthenticated(user: mockUser, token: 'demo_token'));
     } catch (e) {
       emit(UnauthenticatedState());
     }

@@ -74,7 +74,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                         SizedBox(width: 8),
                         Text(
-                          state.user.name.split(' ').first,
+                          state.user['name'].split(' ').first,
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.white,
