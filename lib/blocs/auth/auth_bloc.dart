@@ -4,13 +4,13 @@ import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc() : super(AuthInitialState()) {
-    on<LoginEvent>(_onLogin);
-    on<RegisterEvent>(_onRegister);
-    on<LogoutEvent>(_onLogout);
+    on<AuthLogin>(_onLogin);
+    on<AuthRegister>(_onRegister);
+    on<AuthLogout>(_onLogout);
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
   }
 
-  Future<void> _onLogin(LoginEvent event, Emitter<AuthState> emit) async {
+  Future<void> _onLogin(AuthLogin event, Emitter<AuthState> emit) async {
     emit(AuthLoadingState());
 
     try {
@@ -26,14 +26,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         };
         emit(AuthenticatedState(user: mockUser, token: 'demo_token'));
       } else {
-        emit(const AuthErrorState(message: 'Please enter valid credentials'));
+        emit(AuthErrorState(message: 'Please enter valid credentials'));
       }
     } catch (e) {
       emit(AuthErrorState(message: e.toString()));
     }
   }
 
-  Future<void> _onRegister(RegisterEvent event, Emitter<AuthState> emit) async {
+  Future<void> _onRegister(AuthRegister event, Emitter<AuthState> emit) async {
     emit(AuthLoadingState());
 
     try {
@@ -48,17 +48,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           'id': 1,
           'name': event.name,
           'email': event.email,
+          'age': event.age,
         };
         emit(AuthenticatedState(user: mockUser, token: 'demo_token'));
       } else {
-        emit(const AuthErrorState(message: 'Please fill in all fields'));
+        emit(AuthErrorState(message: 'Please fill in all fields'));
       }
     } catch (e) {
       emit(AuthErrorState(message: e.toString()));
     }
   }
 
-  Future<void> _onLogout(LogoutEvent event, Emitter<AuthState> emit) async {
+  Future<void> _onLogout(AuthLogout event, Emitter<AuthState> emit) async {
     try {
       // Simulate logout API call or cleanup
       await Future.delayed(const Duration(seconds: 1));
