@@ -1,5 +1,4 @@
-import 'dart:async';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:bloc/bloc.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -11,22 +10,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
   }
 
-  // TEMPORARY: Simple mock implementation to stop compilation errors
   Future<void> _onLogin(LoginEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoadingState());
+
     try {
-      // Mock successful login for testing
-      await Future.delayed(Duration(milliseconds: 500));
+      // Simulate login API call
+      await Future.delayed(const Duration(seconds: 2));
 
-      // Create a simple mock user - replace with actual user model
-      final mockUser = {
-        'id': 1,
-        'name': 'Test User',
-        'email': event.email,
-        'age': 12,
-      };
-
-      emit(AuthenticatedState(user: mockUser, token: 'demo_token'));
+      // Mock successful login
+      if (event.email.isNotEmpty && event.password.isNotEmpty) {
+        final mockUser = {
+          'id': 1,
+          'name': 'Demo User',
+          'email': event.email,
+        };
+        emit(AuthenticatedState(user: mockUser, token: 'demo_token'));
+      } else {
+        emit(const AuthErrorState(message: 'Please enter valid credentials'));
+      }
     } catch (e) {
       emit(AuthErrorState(message: e.toString()));
     }
@@ -34,18 +35,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onRegister(RegisterEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoadingState());
+
     try {
-      // Mock successful registration for testing
-      await Future.delayed(Duration(milliseconds: 500));
+      // Simulate registration API call
+      await Future.delayed(const Duration(seconds: 2));
 
-      final mockUser = {
-        'id': 1,
-        'name': event.name,
-        'email': event.email,
-        'age': event.age,
-      };
-
-      emit(AuthenticatedState(user: mockUser, token: 'demo_token'));
+      // Mock successful registration
+      if (event.email.isNotEmpty &&
+          event.password.isNotEmpty &&
+          event.name.isNotEmpty) {
+        final mockUser = {
+          'id': 1,
+          'name': event.name,
+          'email': event.email,
+        };
+        emit(AuthenticatedState(user: mockUser, token: 'demo_token'));
+      } else {
+        emit(const AuthErrorState(message: 'Please fill in all fields'));
+      }
     } catch (e) {
       emit(AuthErrorState(message: e.toString()));
     }
@@ -53,8 +60,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onLogout(LogoutEvent event, Emitter<AuthState> emit) async {
     try {
-      // Mock logout
-      await Future.delayed(Duration(milliseconds: 300));
+      // Simulate logout API call or cleanup
+      await Future.delayed(const Duration(seconds: 1));
       emit(UnauthenticatedState());
     } catch (e) {
       emit(UnauthenticatedState());
@@ -65,14 +72,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     CheckAuthStatusEvent event,
     Emitter<AuthState> emit,
   ) async {
-    // For testing, assume always authenticated
-    final mockUser = {
-      'id': 1,
-      'name': 'Test User',
-      'email': 'test@example.com',
-      'age': 12,
-    };
+    try {
+      // Check if user is authenticated (check token, etc.)
+      // This is a mock implementation
+      await Future.delayed(const Duration(seconds: 1));
 
-    emit(AuthenticatedState(user: mockUser, token: 'demo_token'));
+      // Mock check - replace with actual auth check
+      final mockUser = {
+        'id': 1,
+        'name': 'Demo User',
+        'email': 'demo@example.com',
+      };
+      emit(AuthenticatedState(user: mockUser, token: 'demo_token'));
+    } catch (e) {
+      emit(UnauthenticatedState());
+    }
   }
 }
