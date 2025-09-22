@@ -8,6 +8,7 @@ import '../blocs/auth/auth_state.dart';
 import '../blocs/learning/learning_bloc.dart';
 import '../widgets/stat_card.dart';
 import 'learning_screen.dart';
+import 'quiz_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -157,22 +158,51 @@ class HomeScreen extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: StatCard(
-                      value: '150',
-                      label: 'Words\nTotal Learned',
-                      backgroundColor: AppColors.purpleLight,
-                      iconColor: AppColors.purpleDark,
-                      icon: Icons.menu_book,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => QuizScreen(
+                              quizType: 'Mixed',
+                              questionCount: 10,
+                            ),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(
+                          12), // Optional: for rounded corners
+                      child: StatCard(
+                        value: '150',
+                        label: 'Words\nTotal Learned',
+                        backgroundColor: AppColors.purpleLight,
+                        iconColor: AppColors.purpleDark,
+                        icon: Icons.menu_book,
+                      ),
                     ),
                   ),
                   SizedBox(width: 16),
                   Expanded(
-                    child: StatCard(
-                      value: '5',
-                      label: 'Days\nCurrent Streak',
-                      backgroundColor: AppColors.orangeLight,
-                      iconColor: AppColors.orangeDark,
-                      icon: Icons.local_fire_department,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => QuizScreen(
+                              quizType: 'Mixed',
+                              questionCount: 10,
+                            ),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: StatCard(
+                        value: '5',
+                        label: 'Days\nCurrent Streak',
+                        backgroundColor: AppColors.orangeLight,
+                        iconColor: AppColors.orangeDark,
+                        icon: Icons.local_fire_department,
+                      ),
                     ),
                   ),
                 ],
@@ -181,22 +211,50 @@ class HomeScreen extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: StatCard(
-                      value: '7',
-                      label: 'Days\nLongest Streak',
-                      backgroundColor: AppColors.greenLight,
-                      iconColor: AppColors.greenDark,
-                      icon: Icons.trending_up,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => QuizScreen(
+                              quizType: 'Mixed',
+                              questionCount: 10,
+                            ),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: StatCard(
+                        value: '7',
+                        label: 'Days\nLongest Streak',
+                        backgroundColor: AppColors.greenLight,
+                        iconColor: AppColors.greenDark,
+                        icon: Icons.trending_up,
+                      ),
                     ),
                   ),
                   SizedBox(width: 16),
                   Expanded(
-                    child: StatCard(
-                      value: 'June 25',
-                      label: 'Last Word\nLearned',
-                      backgroundColor: AppColors.purpleLight,
-                      iconColor: AppColors.purpleDark,
-                      icon: Icons.schedule,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => QuizScreen(
+                              quizType: 'Mixed',
+                              questionCount: 10,
+                            ),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: StatCard(
+                        value: 'June 25',
+                        label: 'Last Word\nLearned',
+                        backgroundColor: AppColors.purpleLight,
+                        iconColor: AppColors.purpleDark,
+                        icon: Icons.schedule,
+                      ),
                     ),
                   ),
                 ],
