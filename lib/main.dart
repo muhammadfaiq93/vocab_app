@@ -1,53 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'services/api_service.dart';
-import 'utils/app_routes.dart';
-import 'constants/app_colors.dart';
+import 'blocs/auth/auth_bloc.dart';
+import 'screens/login_screen.dart';
+import 'screens/home_screen.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(VocabularyApp());
+void main() {
+  runApp(MyApp());
 }
 
-class VocabularyApp extends StatelessWidget {
-  // FIXED: Create ApiService instance
-  final ApiService _apiService = ApiService();
-  final String? _currentToken = AppRoutes.currentToken;
-
-  VocabularyApp({Key? key}) : super(key: key);
-
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Vocabulary Adventure',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        primaryColor: AppColors.primaryColor,
-        fontFamily: 'Comic Sans MS',
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<AuthBloc>(
+          create: (context) => AuthBloc(),
         ),
-        cardTheme: CardTheme(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          elevation: 4,
+        // Add more BLoCs here in the future:
+        // BlocProvider<VocabularyBloc>(
+        //   create: (context) => VocabularyBloc(),
+        // ),
+      ],
+      child: MaterialApp(
+        title: 'Children Vocabulary App',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
         ),
-        colorScheme: ColorScheme.fromSwatch().copyWith(
-          primary: AppColors.primaryColor,
-          secondary: AppColors.secondaryColor,
+        home: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            if (state is AuthAuthenticated) {
+              return HomeScreen();
+            } else {
+              return LoginScreen();
+            }
+          },
         ),
       ),
-      initialRoute:
-          AppRoutes.isAuthenticated ? AppRoutes.home : AppRoutes.welcome,
-      // FIXED: Pass apiService and token to route generation
-      onGenerateRoute: (settings) =>
-          AppRoutes.generateRoute(settings, _apiService, _currentToken),
-      debugShowCheckedModeBanner: false,
     );
   }
 }
