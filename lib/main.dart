@@ -3,7 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'blocs/auth/auth_bloc.dart';
 import 'blocs/auth/auth_state.dart'; // Add this import
 import 'screens/login_screen.dart';
-import 'screens/home_screen.dart';
+// import 'screens/home_screen.dart';
+import 'screens/progress_home_screen.dart';
 
 void main() {
   runApp(MyApp());
@@ -22,7 +23,7 @@ class MyApp extends StatelessWidget {
         home: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
             if (state is AuthAuthenticated) {
-              return HomeScreen();
+              return ProgressHomeScreen();
             } else {
               return LoginScreen();
             }
