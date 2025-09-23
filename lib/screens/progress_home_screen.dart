@@ -5,6 +5,7 @@ import '../blocs/auth/auth_state.dart';
 import '../blocs/auth/auth_event.dart';
 import 'learning_screen.dart';
 import 'quiz_screen.dart';
+import 'profile_screen.dart';
 
 class ProgressHomeScreen extends StatelessWidget {
   @override
@@ -33,7 +34,7 @@ class ProgressHomeScreen extends StatelessWidget {
             child: SafeArea(
               child: Column(
                 children: [
-                  _buildHeader(firstName),
+                  _buildHeader(firstName, context),
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
@@ -49,6 +50,8 @@ class ProgressHomeScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildStatsGrid(),
+                            SizedBox(height: 30),
+                            _buildNavigationCards(context),
                             SizedBox(height: 30),
                             _buildWeeklyProgress(),
                             SizedBox(height: 30),
@@ -70,7 +73,7 @@ class ProgressHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(String firstName) {
+  Widget _buildHeader(String firstName, BuildContext context) {
     return Padding(
       padding: EdgeInsets.all(20),
       child: Column(
@@ -105,33 +108,53 @@ class ProgressHomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              Stack(
+              Row(
                 children: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(
-                      Icons.notifications_outlined,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '3',
-                        style: TextStyle(
+                  Stack(
+                    children: [
+                      IconButton(
+                        onPressed: () {},
+                        icon: Icon(
+                          Icons.notifications_outlined,
                           color: Colors.white,
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
+                          size: 24,
                         ),
                       ),
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          padding: EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '3',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Profile button
+                  IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProfileScreen(),
+                        ),
+                      );
+                    },
+                    icon: Icon(
+                      Icons.person,
+                      color: Colors.white,
+                      size: 24,
                     ),
                   ),
                 ],
@@ -139,7 +162,7 @@ class ProgressHomeScreen extends StatelessWidget {
             ],
           ),
           SizedBox(height: 30),
-          
+
           // Title section
           Text(
             'Your Progress!',
@@ -210,7 +233,8 @@ class ProgressHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String value, String label, IconData icon, Color bgColor, Color iconColor) {
+  Widget _buildStatCard(String value, String label, IconData icon,
+      Color bgColor, Color iconColor) {
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -250,6 +274,166 @@ class ProgressHomeScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNavigationCards(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Access',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1F2937),
+          ),
+        ),
+        SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildNavigationCard(
+                context,
+                'Learning',
+                'Start your daily learning',
+                Icons.school,
+                Color(0xFF10B981),
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => LearningScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: _buildNavigationCard(
+                context,
+                'Profile',
+                'Manage your account',
+                Icons.person,
+                Color(0xFF6366F1),
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildNavigationCard(
+                context,
+                'Quiz',
+                'Test your knowledge',
+                Icons.quiz,
+                Color(0xFFF59E0B),
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => QuizScreen(
+                        quizType: 'Mixed',
+                        questionCount: 10,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: _buildNavigationCard(
+                context,
+                'Progress',
+                'View your stats',
+                Icons.trending_up,
+                Color(0xFF8B5CF6),
+                () {
+                  // Already on progress screen
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('You\'re already viewing progress!')),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNavigationCard(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Color(0xFFE5E7EB)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 20,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -369,27 +553,29 @@ class ProgressHomeScreen extends StatelessWidget {
   Widget _buildCalendarGrid() {
     final weekDays = ['Mon', 'Wed', 'Thu', 'Fri', 'Sat', 'Sat', 'Sun'];
     final today = 25;
-    
+
     return Column(
       children: [
         // Week headers
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: weekDays.map((day) => Container(
-            width: 32,
-            child: Text(
-              day,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Color(0xFF6B7280),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          )).toList(),
+          children: weekDays
+              .map((day) => Container(
+                    width: 32,
+                    child: Text(
+                      day,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF6B7280),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ))
+              .toList(),
         ),
         SizedBox(height: 8),
-        
+
         // Calendar grid
         for (int week = 0; week < 5; week++)
           Padding(
@@ -397,21 +583,22 @@ class ProgressHomeScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(7, (dayIndex) {
-                int day = week * 7 + dayIndex + 1 - 2; // Adjust for month start
+                int day = week * 7 + dayIndex + 1 - 2;
                 if (day < 1 || day > 30) {
                   return Container(width: 32, height: 32);
                 }
-                
+
                 bool isToday = day == today;
-                bool hasActivity = [2, 5, 8, 12, 15, 18, 22, 25, 28].contains(day);
-                
+                bool hasActivity =
+                    [2, 5, 8, 12, 15, 18, 22, 25, 28].contains(day);
+
                 return Container(
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: isToday 
+                    color: isToday
                         ? Color(0xFF6366F1)
-                        : hasActivity 
+                        : hasActivity
                             ? Color(0xFF6366F1).withOpacity(0.3)
                             : Colors.transparent,
                     borderRadius: BorderRadius.circular(6),
@@ -421,12 +608,9 @@ class ProgressHomeScreen extends StatelessWidget {
                       day.toString(),
                       style: TextStyle(
                         fontSize: 12,
-                        color: isToday 
-                            ? Colors.white
-                            : Color(0xFF1F2937),
-                        fontWeight: isToday 
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                        color: isToday ? Colors.white : Color(0xFF1F2937),
+                        fontWeight:
+                            isToday ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -466,7 +650,6 @@ class ProgressHomeScreen extends StatelessWidget {
           ],
         ),
         SizedBox(height: 16),
-        
         _buildAchievementItem(
           'Word Starter',
           'First word studied',
@@ -491,7 +674,8 @@ class ProgressHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAchievementItem(String title, String description, String emoji, bool completed) {
+  Widget _buildAchievementItem(
+      String title, String description, String emoji, bool completed) {
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -508,7 +692,7 @@ class ProgressHomeScreen extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: completed 
+              color: completed
                   ? Color(0xFF10B981).withOpacity(0.1)
                   : Color(0xFFE5E7EB),
               borderRadius: BorderRadius.circular(8),
