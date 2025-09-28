@@ -82,8 +82,12 @@ class _LearningScreenState extends State<LearningScreen> {
                         padding: EdgeInsets.all(20),
                         child: Column(
                           children: [
+                            _buildProgressIndicator(),
+                            SizedBox(height: 20),
                             _buildWordCard(currentWord),
                             SizedBox(height: 30),
+                            _buildNavigationButtons(),
+                            SizedBox(height: 20),
                             _buildQuizSection(),
                             SizedBox(height: 20),
                           ],
@@ -549,11 +553,280 @@ class _LearningScreenState extends State<LearningScreen> {
     );
   }
 
+  Widget _buildProgressIndicator() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Color(0xFFF8F9FF),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Color(0xFFE5E7EB), width: 1),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Word ${currentWordIndex + 1} of ${vocabularyWords.length}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF6366F1),
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Color(0xFF10B981),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Learning',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          // Progress bar
+          Row(
+            children: List.generate(vocabularyWords.length, (index) {
+              return Expanded(
+                child: Container(
+                  margin: EdgeInsets.symmetric(horizontal: 2),
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: index <= currentWordIndex
+                        ? Color(0xFF6366F1)
+                        : Color(0xFFE5E7EB),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavigationButtons() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        children: [
+          // Previous Button
+          Expanded(
+            child: GestureDetector(
+              onTap: currentWordIndex > 0 ? _previousWord : null,
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: currentWordIndex > 0
+                      ? Color(0xFF10B981)
+                      : Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: currentWordIndex > 0
+                      ? [
+                          BoxShadow(
+                            color: Color(0xFF10B981).withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.arrow_back_ios,
+                      color: currentWordIndex > 0
+                          ? Colors.white
+                          : Color(0xFF9CA3AF),
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Previous',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: currentWordIndex > 0
+                            ? Colors.white
+                            : Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          SizedBox(width: 16),
+
+          // Fun emoji or icon in the middle
+          Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Color(0xFFFBBF24),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xFFFBBF24).withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Text(
+              '📚',
+              style: TextStyle(fontSize: 20),
+            ),
+          ),
+
+          SizedBox(width: 16),
+
+          // Next Button
+          Expanded(
+            child: GestureDetector(
+              onTap: currentWordIndex < vocabularyWords.length - 1
+                  ? _nextWord
+                  : null,
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: currentWordIndex < vocabularyWords.length - 1
+                      ? Color(0xFF6366F1)
+                      : Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: currentWordIndex < vocabularyWords.length - 1
+                      ? [
+                          BoxShadow(
+                            color: Color(0xFF6366F1).withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Next',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: currentWordIndex < vocabularyWords.length - 1
+                            ? Colors.white
+                            : Color(0xFF9CA3AF),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: currentWordIndex < vocabularyWords.length - 1
+                          ? Colors.white
+                          : Color(0xFF9CA3AF),
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _previousWord() {
+    if (currentWordIndex > 0) {
+      setState(() {
+        currentWordIndex--;
+      });
+      _showWordChangeAnimation(
+          'Previous word: ${vocabularyWords[currentWordIndex]['word']}');
+    }
+  }
+
+  void _nextWord() {
+    if (currentWordIndex < vocabularyWords.length - 1) {
+      setState(() {
+        currentWordIndex++;
+      });
+      _showWordChangeAnimation(
+          'Next word: ${vocabularyWords[currentWordIndex]['word']}');
+    }
+  }
+
+  void _showWordChangeAnimation(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Text('✨', style: TextStyle(fontSize: 16)),
+            ),
+            SizedBox(width: 12),
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Color(0xFF6366F1),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
   void _toggleBookmark() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Word bookmarked!'),
+        content: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Text('⭐', style: TextStyle(fontSize: 16)),
+            ),
+            SizedBox(width: 12),
+            Text(
+              'Word bookmarked!',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Color(0xFF10B981),
         duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
       ),
     );
   }
