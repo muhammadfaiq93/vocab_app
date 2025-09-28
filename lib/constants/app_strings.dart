@@ -177,4 +177,95 @@ class AppStrings {
   static const String loading = 'Loading...';
   static const String error = 'Error';
   static const String success = 'Success';
+
+  // App Info
+  static const String appTagline = 'Daily words. Lifelong impact!';
+  static const String appSubtitle = 'Your daily dose of vocabulary.';
+
+  // Authentication
+  static const String loginSubtitle =
+      'Sign in to continue your learning journey';
+  static const String registerSubtitle = 'Join us to start learning new words';
+
+  // Form Fields
+  static const String email = 'Email';
+
+  // Validation Messages
+  static const String pleaseEnterName = 'Please enter your name';
+  static const String pleaseEnterEmail = 'Please enter your email';
+  static const String pleaseEnterValidEmail = 'Please enter a valid email';
+  static const String pleaseEnterPassword = 'Please enter your password';
+  static const String pleaseEnterAge = 'Please enter your age';
+
+  // Success Messages
+  static const String logoutSuccessful = 'Logged out successfully';
+
+  // Error Messages
+  static const String invalidCredentials = 'Invalid email or password';
+  static const String serverError = 'Server error. Please try again later.';
+  static const String unexpectedError = 'An unexpected error occurred';
+
+  // Learning
+  static const String dailyWords = 'Daily words.';
+  static const String lifelongImpact = 'Lifelong impact!';
+
+  // Navigation
+  static const String quickAccess = 'Quick Access';
+  static const String learning = 'Learning';
+  static const String startDailyLearning = 'Start your daily learning';
+  static const String manageAccount = 'Manage your account';
+  static const String testKnowledge = 'Test your knowledge';
+  static const String viewStats = 'View your stats';
+
+  // Word Learning
+  static const String seeDetails = 'See Details';
+  static const String tryQuickQuiz = 'Try a Quick Quiz';
+  static const String testBrainSeconds =
+      'Test your brain in seconds – let\'s go';
+
+  // Stats
+  static const String totalLearned = 'Total Learned';
+  static const String nextWord = 'Next Word';
+  static const String accuracy = 'Accuracy';
+  static const String days = 'Days';
+
+  // Profile
+  static const String yourProfile = 'Your Profile';
+  static const String yourJourney = '"Your journey, your words, your way."';
+  static const String appSettings = 'App Settings';
+  static const String accountSettings = 'Account Settings';
+  static const String lightMode = 'Light';
+  static const String fontSize = 'Font Size';
+  static const String language = 'Language';
+  static const String changePassword = 'Change Password';
+
+  // Quiz
+  static const String wordsQuiz = "Word's Quiz";
+  static const String letsSeeLearning =
+      '"Let\'s see how much you remember today!"';
+  static const String correct = 'Correct';
+  static const String wrong = 'Wrong';
+  static const String question = 'Question';
+  static const String exitQuiz = 'Exit Quiz';
+  static const String tryAgain = 'Try Again';
+  static const String backToHome = 'Back to Home';
+
+  // Achievements
+  static const String achievements = 'Achievements';
+  static const String seeAll = 'See All';
+  static const String wordStarter = 'Word Starter';
+  static const String firstWordStudied = 'First word studied';
+  static const String fiveDayStreak = '5-Day Streak';
+  static const String fiveDaysLearning = '5 days learning streak!';
+  static const String quizHero = 'Quiz Hero';
+  static const String completeTenQuizzes = 'Complete 10 quizzes';
+
+  // Common
+  static const String ok = 'OK';
+  static const String yes = 'Yes';
+  static const String no = 'No';
+  static const String save = 'Save';
+  static const String edit = 'Edit';
+  static const String delete = 'Delete';
+  static const String close = 'Close';
 }

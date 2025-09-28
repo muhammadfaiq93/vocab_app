@@ -1,190 +1,228 @@
-// services/api_service.dart - Enhanced
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
-import '../models/vocabulary_card.dart';
-import '../models/exam_question.dart';
-import '../models/exam_result.dart';
 import '../constants/api_constants.dart';
+import '../models/child_user.dart';
+
+class ApiResponse<T> {
+  final bool success;
+  final T? data;
+  final String? message;
+  final int? statusCode;
+
+  const ApiResponse({
+    required this.success,
+    this.data,
+    this.message,
+    this.statusCode,
+  });
+}
+
+class LoginResponse {
+  final ChildUser user;
+  final String token;
+
+  const LoginResponse({
+    required this.user,
+    required this.token,
+  });
+
+  factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    return LoginResponse(
+      user: ChildUser.fromJson(json['user'] ?? json['data'] ?? {}),
+      token: json['token'] ?? json['access_token'] ?? '',
+    );
+  }
+}
 
 class ApiService {
-  static const String baseUrl = ApiConstants.baseUrl;
+  final http.Client _client;
 
-  // Headers with authentication
-  Map<String, String> _getHeaders(String? token) {
-    final headers = {
-      'Content-Type': 'application/json',
-    };
-    if (token != null) {
-      headers['Authorization'] = 'Bearer $token';
-    }
-    return headers;
-  }
+  ApiService({http.Client? client}) : _client = client ?? http.Client();
 
-  // Learning API methods
-  Future<List<VocabularyCard>> getVocabularyCards({
-    required String token,
-    String? category,
-    int? difficulty,
-    int page = 1,
-    int limit = 10,
+  // Login method
+  Future<ApiResponse<LoginResponse>> login({
+    required String email,
+    required String password,
   }) async {
-    final queryParams = <String, String>{
-      'page': page.toString(),
-      'limit': limit.toString(),
-    };
+    try {
+      final response = await _client
+          .post(
+            Uri.parse(ApiConstants.loginEndpoint),
+            headers: ApiConstants.defaultHeaders,
+            body: json.encode({
+              'email': email,
+              'password': password,
+            }),
+          )
+          .timeout(ApiConstants.connectTimeout);
 
-    if (category != null) queryParams['category'] = category;
-    if (difficulty != null) queryParams['difficulty'] = difficulty.toString();
-
-    final uri =
-        Uri.parse('$baseUrl/vocabulary').replace(queryParameters: queryParams);
-
-    final response = await http.get(
-      uri,
-      headers: _getHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body)['data'];
-      return data.map((item) => VocabularyCard.fromJson(item)).toList();
-    } else {
-      throw Exception('Failed to load vocabulary cards');
+      return _handleLoginResponse(response);
+    } on SocketException {
+      return const ApiResponse(
+        success: false,
+        message: 'No internet connection. Please check your network.',
+      );
+    } on HttpException {
+      return const ApiResponse(
+        success: false,
+        message: 'Network error occurred. Please try again.',
+      );
+    } on FormatException {
+      return const ApiResponse(
+        success: false,
+        message: 'Invalid response format from server.',
+      );
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'An unexpected error occurred: ${e.toString()}',
+      );
     }
   }
 
-  Future<List<String>> getCategories({required String token}) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/vocabulary/categories'),
-      headers: _getHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body)['categories'];
-      return data.cast<String>();
-    } else {
-      throw Exception('Failed to load categories');
-    }
-  }
-
-  Future<void> markVocabularyAsLearned({
-    required String token,
-    required String vocabularyId,
+  // Register method
+  Future<ApiResponse<LoginResponse>> register({
+    required String name,
+    required String email,
+    required String password,
+    required int age,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/learning/progress'),
-      headers: _getHeaders(token),
-      body: json.encode({
-        'vocabularyId': vocabularyId,
-        'status': 'learned',
-      }),
-    );
+    try {
+      final response = await _client
+          .post(
+            Uri.parse(ApiConstants.registerEndpoint),
+            headers: ApiConstants.defaultHeaders,
+            body: json.encode({
+              'name': name,
+              'email': email,
+              'password': password,
+              'age': age,
+            }),
+          )
+          .timeout(ApiConstants.connectTimeout);
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to mark vocabulary as learned');
+      return _handleLoginResponse(response);
+    } on SocketException {
+      return const ApiResponse(
+        success: false,
+        message: 'No internet connection. Please check your network.',
+      );
+    } on HttpException {
+      return const ApiResponse(
+        success: false,
+        message: 'Network error occurred. Please try again.',
+      );
+    } on FormatException {
+      return const ApiResponse(
+        success: false,
+        message: 'Invalid response format from server.',
+      );
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'An unexpected error occurred: ${e.toString()}',
+      );
     }
   }
 
-  Future<Map<String, dynamic>> getLearningProgress({
-    required String token,
-  }) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/learning/progress'),
-      headers: _getHeaders(token),
-    );
+  // Logout method
+  Future<ApiResponse<void>> logout(String token) async {
+    try {
+      final response = await _client.post(
+        Uri.parse(ApiConstants.logoutEndpoint),
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
 
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load learning progress');
+      if (response.statusCode == 200) {
+        return const ApiResponse(success: true);
+      } else {
+        return const ApiResponse(
+          success: false,
+          message: 'Logout failed. Please try again.',
+        );
+      }
+    } catch (e) {
+      // Even if logout API fails, we consider it successful for local logout
+      return const ApiResponse(success: true);
     }
   }
 
-  // Exam API methods
-  Future<List<ExamQuestion>> generateExam({
-    required String token,
-    String? category,
-    int? difficulty,
-    int questionCount = 10,
-  }) async {
-    final body = <String, dynamic>{
-      'questionCount': questionCount,
-    };
+  // Private method to handle login/register responses
+  ApiResponse<LoginResponse> _handleLoginResponse(http.Response response) {
+    try {
+      final responseData = json.decode(response.body);
 
-    if (category != null) body['category'] = category;
-    if (difficulty != null) body['difficulty'] = difficulty;
+      switch (response.statusCode) {
+        case 200:
+        case 201:
+          final loginResponse = LoginResponse.fromJson(responseData);
+          return ApiResponse(
+            success: true,
+            data: loginResponse,
+            statusCode: response.statusCode,
+          );
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/exam/generate'),
-      headers: _getHeaders(token),
-      body: json.encode(body),
-    );
+        case 401:
+          return ApiResponse(
+            success: false,
+            message: responseData['message'] ?? 'Invalid email or password.',
+            statusCode: response.statusCode,
+          );
 
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body)['questions'];
-      return data.map((item) => ExamQuestion.fromJson(item)).toList();
-    } else {
-      throw Exception('Failed to generate exam');
+        case 422:
+          String errorMessage = 'Validation failed.';
+
+          // Handle Laravel validation errors
+          if (responseData['errors'] != null) {
+            final errors = responseData['errors'] as Map<String, dynamic>;
+            final firstError = errors.values.first;
+            if (firstError is List && firstError.isNotEmpty) {
+              errorMessage = firstError.first.toString();
+            }
+          } else if (responseData['message'] != null) {
+            errorMessage = responseData['message'];
+          }
+
+          return ApiResponse(
+            success: false,
+            message: errorMessage,
+            statusCode: response.statusCode,
+          );
+
+        case 429:
+          return const ApiResponse(
+            success: false,
+            message: 'Too many requests. Please try again later.',
+          );
+
+        case 500:
+          return const ApiResponse(
+            success: false,
+            message: 'Server error. Please try again later.',
+          );
+
+        default:
+          return ApiResponse(
+            success: false,
+            message:
+                responseData['message'] ?? 'Request failed. Please try again.',
+            statusCode: response.statusCode,
+          );
+      }
+    } catch (e) {
+      return const ApiResponse(
+        success: false,
+        message: 'Failed to parse server response.',
+      );
     }
   }
 
-  Future<ExamResult> submitExam({
-    required String token,
-    required String examId,
-    required List<UserAnswer> answers,
-    required int timeSpent,
-  }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/exam/submit'),
-      headers: _getHeaders(token),
-      body: json.encode({
-        'examId': examId,
-        'answers': answers.map((a) => a.toJson()).toList(),
-        'timeSpent': timeSpent,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      return ExamResult.fromJson(json.decode(response.body)['result']);
-    } else {
-      throw Exception('Failed to submit exam');
-    }
-  }
-
-  Future<List<ExamResult>> getExamHistory({
-    required String token,
-    int page = 1,
-    int limit = 10,
-  }) async {
-    final uri = Uri.parse('$baseUrl/exam/history').replace(queryParameters: {
-      'page': page.toString(),
-      'limit': limit.toString(),
-    });
-
-    final response = await http.get(
-      uri,
-      headers: _getHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body)['results'];
-      return data.map((item) => ExamResult.fromJson(item)).toList();
-    } else {
-      throw Exception('Failed to load exam history');
-    }
-  }
-
-  Future<Map<String, dynamic>> getExamStatistics({
-    required String token,
-  }) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/exam/statistics'),
-      headers: _getHeaders(token),
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body)['statistics'];
-    } else {
-      throw Exception('Failed to load exam statistics');
-    }
+  // Dispose method for cleanup
+  void dispose() {
+    _client.close();
   }
 }
