@@ -17,7 +17,9 @@ class ProgressHomeScreen extends StatelessWidget {
         }
 
         final user = state.user;
-        String firstName = user['name']?.split(' ').first ?? 'User';
+        String userName = user['name'] ?? '';
+        String firstName =
+            userName.isNotEmpty ? userName.split(' ').first : 'User';
 
         return Scaffold(
           body: Container(
@@ -89,7 +91,7 @@ class ProgressHomeScreen extends StatelessWidget {
                     radius: 16,
                     backgroundColor: Colors.white.withOpacity(0.2),
                     child: Text(
-                      firstName[0].toUpperCase(),
+                      firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

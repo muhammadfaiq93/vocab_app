@@ -25,17 +25,35 @@ class MyApp extends StatelessWidget {
           fontFamily: 'System',
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
-        home: BlocBuilder<AuthBloc, AuthState>(
-          builder: (context, state) {
-            if (state is AuthAuthenticated) {
-              return ProgressHomeScreen();
-            } else {
-              return OnboardingScreen();
-            }
-          },
-        ),
+        home: AuthWrapper(),
         debugShowCheckedModeBanner: false,
       ),
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        print('Current AuthState: ${state.runtimeType}'); // Debug log
+
+        if (state is AuthAuthenticated) {
+          print('Navigating to ProgressHomeScreen'); // Debug log
+          return ProgressHomeScreen();
+        } else if (state is AuthLoading) {
+          print('Showing loading screen'); // Debug log
+          return Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        } else {
+          print('Showing OnboardingScreen'); // Debug log
+          return OnboardingScreen();
+        }
+      },
     );
   }
 }
