@@ -7,7 +7,6 @@ import '../blocs/auth/auth_event.dart';
 import '../blocs/auth/auth_state.dart';
 import '../widgets/custom_text_field.dart';
 import '../utils/validators.dart';
-import 'progress_home_screen.dart';
 import '../utils/app_routes.dart'; // Add this import at the top
 
 class LoginScreen extends StatefulWidget {
@@ -38,8 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
       listener: (context, state) {
         if (state is AuthAuthenticated) {
           print('Login successful');
-          // Use the correct route constant
-          Navigator.pushReplacementNamed(context, AppRoutes.homeProgress);
+          Navigator.pushReplacementNamed(
+              context, AppRoutes.homeProgress); // ← CORRECT
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message), backgroundColor: Colors.red),

@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
 import '../models/child_user.dart';
+import '../models/vocabulary_card.dart';
+import '../models/exam_question.dart';
+import '../models/exam_result.dart';
 
 class ApiResponse<T> {
   final bool success;
@@ -29,7 +32,8 @@ class LoginResponse {
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
     return LoginResponse(
-      user: ChildUser.fromJson(json['user'] ?? json['data'] ?? {}),
+      user: ChildUser.fromJson(
+          json['child'] ?? json['user'] ?? json['data'] ?? {}),
       token: json['token'] ?? json['access_token'] ?? '',
     );
   }
@@ -155,16 +159,20 @@ class ApiService {
 
   // ==================== LEARNING METHODS ====================
 
-  /// Get vocabulary cards for learning
-  Future<List<Map<String, dynamic>>> getVocabularyCards({
+  /// Get vocabulary cards for learning - returns typed VocabularyCard objects
+  Future<List<VocabularyCard>> getVocabularyCards({
     required String token,
     String? category,
+    int? difficulty,
     int? limit,
+    int? page,
   }) async {
     try {
       final queryParams = <String, String>{};
       if (category != null) queryParams['category'] = category;
+      if (difficulty != null) queryParams['difficulty'] = difficulty.toString();
       if (limit != null) queryParams['limit'] = limit.toString();
+      if (page != null) queryParams['page'] = page.toString();
 
       final uri = Uri.parse('${ApiConstants.baseUrl}/api/vocabulary').replace(
         queryParameters: queryParams.isEmpty ? null : queryParams,
@@ -180,7 +188,8 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return List<Map<String, dynamic>>.from(data['data'] ?? []);
+        final List<dynamic> cardsJson = data['data'] ?? [];
+        return cardsJson.map((json) => VocabularyCard.fromJson(json)).toList();
       } else {
         throw Exception(
             'Failed to load vocabulary cards: ${response.statusCode}');
@@ -194,8 +203,8 @@ class ApiService {
     }
   }
 
-  /// Get all categories
-  Future<List<Map<String, dynamic>>> getCategories({
+  /// Get all categories - returns list of category names
+  Future<List<String>> getCategories({
     required String token,
   }) async {
     try {
@@ -209,7 +218,24 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return List<Map<String, dynamic>>.from(data['data'] ?? []);
+        final categoriesData = data['data'] ?? [];
+
+        // If the API returns a list of category objects, extract the names
+        if (categoriesData is List) {
+          return categoriesData
+              .map((category) {
+                if (category is Map<String, dynamic>) {
+                  return category['name']?.toString() ??
+                      category['category']?.toString() ??
+                      '';
+                }
+                return category.toString();
+              })
+              .where((name) => name.isNotEmpty)
+              .toList();
+        }
+
+        return [];
       } else {
         throw Exception('Failed to load categories: ${response.statusCode}');
       }
@@ -222,10 +248,11 @@ class ApiService {
     }
   }
 
-  /// Mark a vocabulary card as learned
+  /// Mark a vocabulary card as learned - accepts both String and int
   Future<Map<String, dynamic>> markVocabularyAsLearned({
     required String token,
-    required int vocabularyId,
+    required dynamic
+        vocabularyId, // Changed to dynamic to accept both String and int
   }) async {
     try {
       final response = await _client.post(
@@ -283,15 +310,17 @@ class ApiService {
 
   // ==================== EXAM METHODS ====================
 
-  /// Generate an exam
-  Future<List<Map<String, dynamic>>> generateExam({
+  /// Generate an exam - returns typed ExamQuestion objects
+  Future<List<ExamQuestion>> generateExam({
     required String token,
     String? category,
+    int? difficulty,
     int? questionCount,
   }) async {
     try {
       final body = <String, dynamic>{};
       if (category != null) body['category'] = category;
+      if (difficulty != null) body['difficulty'] = difficulty.toString();
       if (questionCount != null) body['question_count'] = questionCount;
 
       final response = await _client
@@ -307,7 +336,10 @@ class ApiService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = json.decode(response.body);
-        return List<Map<String, dynamic>>.from(data['data'] ?? []);
+        final List<dynamic> questionsJson = data['data'] ?? [];
+        return questionsJson
+            .map((json) => ExamQuestion.fromJson(json))
+            .toList();
       } else {
         throw Exception('Failed to generate exam: ${response.statusCode}');
       }
@@ -320,27 +352,41 @@ class ApiService {
     }
   }
 
-  /// Submit exam answers
-  Future<Map<String, dynamic>> submitExam({
+  /// Submit exam answers - accepts UserAnswer objects and returns ExamResult
+  Future<ExamResult> submitExam({
     required String token,
-    required int examId,
-    required List<Map<String, dynamic>> answers,
+    required dynamic examId, // Accept both String and int
+    required List<UserAnswer> answers,
+    int? timeSpent,
   }) async {
     try {
+      // Convert UserAnswer objects to JSON
+      final answersJson = answers.map((answer) => answer.toJson()).toList();
+
+      final body = <String, dynamic>{
+        'answers': answersJson,
+      };
+      if (timeSpent != null) body['time_spent'] = timeSpent;
+
+      // Convert examId to int if it's a String
+      final examIdInt = examId is String
+          ? int.tryParse(examId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0
+          : examId;
+
       final response = await _client
           .post(
-            Uri.parse('${ApiConstants.baseUrl}/api/exam/$examId/submit'),
+            Uri.parse('${ApiConstants.baseUrl}/api/exam/$examIdInt/submit'),
             headers: {
               ...ApiConstants.defaultHeaders,
               'Authorization': 'Bearer $token',
             },
-            body: json.encode({'answers': answers}),
+            body: json.encode(body),
           )
           .timeout(ApiConstants.connectTimeout);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return data['data'] ?? {};
+        return ExamResult.fromJson(data['data'] ?? {});
       } else {
         throw Exception('Failed to submit exam: ${response.statusCode}');
       }
@@ -353,13 +399,23 @@ class ApiService {
     }
   }
 
-  /// Get exam history
-  Future<List<Map<String, dynamic>>> getExamHistory({
+  /// Get exam history with pagination - returns typed ExamResult objects
+  Future<List<ExamResult>> getExamHistory({
     required String token,
+    int? page,
+    int? limit,
   }) async {
     try {
+      final queryParams = <String, String>{};
+      if (page != null) queryParams['page'] = page.toString();
+      if (limit != null) queryParams['limit'] = limit.toString();
+
+      final uri = Uri.parse('${ApiConstants.baseUrl}/api/exam/history').replace(
+        queryParameters: queryParams.isEmpty ? null : queryParams,
+      );
+
       final response = await _client.get(
-        Uri.parse('${ApiConstants.baseUrl}/api/exam/history'),
+        uri,
         headers: {
           ...ApiConstants.defaultHeaders,
           'Authorization': 'Bearer $token',
@@ -368,7 +424,8 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return List<Map<String, dynamic>>.from(data['data'] ?? []);
+        final List<dynamic> historyJson = data['data'] ?? [];
+        return historyJson.map((json) => ExamResult.fromJson(json)).toList();
       } else {
         throw Exception('Failed to load exam history: ${response.statusCode}');
       }

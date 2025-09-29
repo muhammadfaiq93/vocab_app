@@ -105,7 +105,14 @@ class _LearningScreenState extends State<LearningScreen> {
   }
 
   Widget _buildHeader(Map<String, dynamic> user) {
-    String firstName = user['name']?.split(' ').first ?? 'User';
+    // String firstName = user['name']?.split(' ').first ?? 'User';
+
+    String userName = user['name']?.toString().trim() ?? '';
+    String firstName = userName.isNotEmpty ? userName.split(' ').first : 'User';
+
+    // Safely get the first initial with fallback
+    String userInitial =
+        firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
 
     return Padding(
       padding: EdgeInsets.all(20),
