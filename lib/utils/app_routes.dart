@@ -6,6 +6,7 @@ import '../screens/welcome_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/learning_screen.dart';
+import '../screens/progress_home_screen.dart';
 import '../screens/exam_screen.dart';
 // REMOVE THIS LINE TO DISABLE AUTH:
 // import '../blocs/auth/auth_bloc.dart';
@@ -17,6 +18,7 @@ class AppRoutes {
   static const String welcome = '/';
   static const String login = '/login';
   static const String home = '/home';
+  static const String homeProgress = '/homeprogress';
   static const String learning = '/learning';
   static const String exam = '/exam';
   static const String profile = '/profile';
@@ -40,7 +42,10 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (_) => HomeScreen(),
         );
-
+      case homeProgress:
+        return MaterialPageRoute(
+          builder: (_) => ProgressHomeScreen(),
+        );
       case learning:
         return MaterialPageRoute(
           builder: (_) => MultiBlocProvider(
@@ -52,7 +57,7 @@ class AppRoutes {
                 ),
               ),
             ],
-            child: const LearningScreen(),
+            child: LearningScreen(),
           ),
         );
 
