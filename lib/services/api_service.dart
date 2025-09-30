@@ -564,8 +564,6 @@ class ApiService {
         },
       );
 
-      print('🔍 Fetching $count words from difficulty level $difficulty');
-
       final response = await _client.get(
         uri,
         headers: {
@@ -573,7 +571,6 @@ class ApiService {
           'Authorization': 'Bearer $token',
         },
       ).timeout(ApiConstants.connectTimeout);
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> vocabularyJson = data['data'] ?? [];

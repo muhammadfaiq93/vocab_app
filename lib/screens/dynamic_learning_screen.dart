@@ -92,7 +92,7 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
                     CircularProgressIndicator(color: Colors.white),
                     SizedBox(height: 16),
                     Text(
-                      'Loading ${widget.wordCount} words...',
+                      'Loading ${(widget.wordCount - 10)} To ${widget.wordCount} words...',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -214,7 +214,7 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
                   _buildHeader(user),
                   Expanded(
                     child: Container(
-                      margin: EdgeInsets.only(top: 20),
+                      margin: EdgeInsets.only(top: 10),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.only(
@@ -297,21 +297,21 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
               ),
             ],
           ),
-          SizedBox(height: 30),
+          SizedBox(height: 25),
           Text(
             "Today's Word!",
             style: TextStyle(
               color: Colors.white,
-              fontSize: 32,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
           ),
           SizedBox(height: 8),
           Text(
-            'Learning ${vocabularyCards.length} amazing words',
+            'Learning ${vocabularyCards.length} words from ${(widget.wordCount - 10)} to ${widget.wordCount} amazing words',
             style: TextStyle(
               color: Colors.white.withOpacity(0.9),
-              fontSize: 16,
+              fontSize: 14,
             ),
           ),
         ],
@@ -340,7 +340,7 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
           // Word Title
           Center(
             child: Container(
-              padding: EdgeInsets.symmetric(vertical: 20, horizontal: 32),
+              padding: EdgeInsets.symmetric(vertical: 10, horizontal: 32),
               decoration: BoxDecoration(
                 color: Color(0xFFF8F9FF),
                 borderRadius: BorderRadius.circular(20),
@@ -348,7 +348,7 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
               child: Text(
                 card.word,
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF1F2937),
                 ),

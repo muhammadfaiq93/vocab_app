@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class VocabularyCard {
   final int id;
   final String word;
@@ -5,9 +7,9 @@ class VocabularyCard {
   final String example;
   final String pronunciation;
   final List<String> synonyms;
-  final List<String>? synonymChoices;
+  final List<String>? synonymChoices; // Add this
   final List<String> antonyms;
-  final List<String>? antonymChoices;
+  final List<String>? antonymChoices; // Add this
   final String category;
   final int difficultyLevel;
   final bool isFavorite;
@@ -23,9 +25,9 @@ class VocabularyCard {
     required this.example,
     required this.pronunciation,
     required this.synonyms,
-    required this.synonymChoices,
+    this.synonymChoices,
     required this.antonyms,
-    required this.antonymChoices,
+    this.antonymChoices,
     required this.category,
     required this.difficultyLevel,
     this.isFavorite = false,
@@ -42,16 +44,10 @@ class VocabularyCard {
       definition: json['definition'] ?? '',
       example: json['example'] ?? '',
       pronunciation: json['pronunciation'] ?? '',
-      synonyms:
-          json['synonyms'] != null ? List<String>.from(json['synonyms']) : [],
-      synonymChoices: json['synonym_choices'] != null
-          ? List<String>.from(json['synonym_choices'])
-          : null,
-      antonyms:
-          json['antonyms'] != null ? List<String>.from(json['antonyms']) : [],
-      antonymChoices: json['antonym_choices'] != null
-          ? List<String>.from(json['antonym_choices'])
-          : null,
+      synonyms: _parseJsonList(json['synonyms']),
+      synonymChoices: _parseJsonList(json['synonym_choices']),
+      antonyms: _parseJsonList(json['antonyms']),
+      antonymChoices: _parseJsonList(json['antonym_choices']),
       category: json['category'] ?? '',
       difficultyLevel: json['difficulty_level'] ?? 1,
       isFavorite: json['is_favorite'] ?? false,
@@ -62,6 +58,31 @@ class VocabularyCard {
     );
   }
 
+  // Helper method to parse JSON strings or arrays into List<String>
+  static List<String> _parseJsonList(dynamic value) {
+    if (value == null) return [];
+
+    // If it's already a List
+    if (value is List) {
+      return value.map((item) => item.toString()).toList();
+    }
+
+    // If it's a String (JSON encoded)
+    if (value is String) {
+      try {
+        final decoded = json.decode(value);
+        if (decoded is List) {
+          return decoded.map((item) => item.toString()).toList();
+        }
+      } catch (e) {
+        print('Error parsing JSON list: $e');
+        return [];
+      }
+    }
+
+    return [];
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -70,7 +91,9 @@ class VocabularyCard {
       'example': example,
       'pronunciation': pronunciation,
       'synonyms': synonyms,
+      'synonym_choices': synonymChoices,
       'antonyms': antonyms,
+      'antonym_choices': antonymChoices,
       'category': category,
       'difficulty_level': difficultyLevel,
       'is_favorite': isFavorite,
