@@ -5,6 +5,11 @@ import '../blocs/auth/auth_state.dart';
 import 'quiz_screen.dart';
 
 class LearningScreen extends StatefulWidget {
+  final int? wordCount; // Add this parameter
+
+  const LearningScreen({Key? key, this.wordCount})
+      : super(key: key); // Add constructor
+
   @override
   _LearningScreenState createState() => _LearningScreenState();
 }
@@ -40,6 +45,18 @@ class _LearningScreenState extends State<LearningScreen> {
       'date': 'Wednesday, June 26, 2025',
     },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // You can use widget.wordCount here to fetch specific number of words
+    if (widget.wordCount != null) {
+      print('Learning ${widget.wordCount} words');
+      // TODO: Fetch vocabulary based on widget.wordCount from API
+      // For now, limit the existing list
+      // vocabularyWords = vocabularyWords.take(widget.wordCount!).toList();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

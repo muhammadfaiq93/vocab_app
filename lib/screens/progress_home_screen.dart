@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../constants/app_strings.dart';
+import '../constants/app_colors.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../blocs/auth/auth_state.dart';
 import '../blocs/auth/auth_event.dart';
 import 'learning_screen.dart';
 import 'quiz_screen.dart';
 import 'profile_screen.dart';
+import '../widgets/vocabulary_selection_modal.dart';
 
 class ProgressHomeScreen extends StatelessWidget {
   @override
@@ -61,6 +64,8 @@ class ProgressHomeScreen extends StatelessWidget {
                             SizedBox(height: 30),
                             _buildAchievements(),
                             SizedBox(height: 20),
+                            _buildContinueLearningButton(context),
+                            SizedBox(height: 40),
                           ],
                         ),
                       ),
@@ -101,7 +106,7 @@ class ProgressHomeScreen extends StatelessWidget {
                   ),
                   SizedBox(width: 8),
                   Text(
-                    'Sm Jony',
+                    firstName,
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -744,6 +749,53 @@ class ProgressHomeScreen extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildContinueLearningButton(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        width: double.infinity,
+        height: 56,
+        child: ElevatedButton(
+          onPressed: () async {
+            final result = await showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (context) => VocabularySelectionModal(),
+            );
+
+            if (result != null) {
+              // Navigate to learning screen with selected word count
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => LearningScreen(
+                    wordCount: result['count'],
+                  ),
+                ),
+              );
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primaryBlue,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: Text(
+            AppStrings.continueLearning,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
     );
   }
