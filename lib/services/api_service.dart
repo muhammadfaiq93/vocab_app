@@ -510,6 +510,84 @@ class ApiService {
     }
   }
 
+  /// Get vocabulary by range
+  Future<List<VocabularyCard>> getVocabularyByRange({
+    required String token,
+    required int start,
+    required int end,
+  }) async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}/vocabulary-range').replace(
+        queryParameters: {
+          'start': start.toString(),
+          'end': end.toString(),
+        },
+      );
+
+      final response = await _client.get(
+        uri,
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> vocabularyJson = data['data'] ?? [];
+        return vocabularyJson
+            .map((json) => VocabularyCard.fromJson(json))
+            .toList();
+      } else {
+        throw Exception('Failed to load vocabulary: ${response.statusCode}');
+      }
+    } on SocketException {
+      throw Exception('No internet connection');
+    } on HttpException {
+      throw Exception('Network error occurred');
+    } catch (e) {
+      throw Exception('Error fetching vocabulary: $e');
+    }
+  }
+
+  /// Get vocabulary by difficulty level and count
+  Future<List<VocabularyCard>> getVocabularyByDifficulty({
+    required String token,
+    required int difficulty,
+    required int count,
+  }) async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}/vocabulary').replace(
+        queryParameters: {
+          'difficulty': difficulty.toString(),
+          'limit': count.toString(),
+        },
+      );
+
+      print('🔍 Fetching $count words from difficulty level $difficulty');
+
+      final response = await _client.get(
+        uri,
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> vocabularyJson = data['data'] ?? [];
+        return vocabularyJson
+            .map((json) => VocabularyCard.fromJson(json))
+            .toList();
+      } else {
+        throw Exception('Failed to load vocabulary: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching vocabulary: $e');
+    }
+  }
+
   // ==================== CLEANUP ====================
 
   // Dispose method for cleanup

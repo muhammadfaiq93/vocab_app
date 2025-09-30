@@ -7,32 +7,67 @@ class VocabularySelectionModal extends StatefulWidget {
 }
 
 class _VocabularySelectionModalState extends State<VocabularySelectionModal> {
+  int? selectedCategory;
   int? selectedRange;
+
+  final List<Map<String, dynamic>> categories = [
+    {
+      'level': 1,
+      'icon': '🌱',
+      'title': 'Beginner',
+      'subtitle': 'Simple everyday words',
+      'color': Color(0xFF10B981),
+      'wordRange': '1-40',
+    },
+    {
+      'level': 2,
+      'icon': '🌿',
+      'title': 'Elementary',
+      'subtitle': 'Building your foundation',
+      'color': Color(0xFF3B82F6),
+      'wordRange': '41-80',
+    },
+    {
+      'level': 3,
+      'icon': '🌳',
+      'title': 'Intermediate',
+      'subtitle': 'Challenge yourself',
+      'color': Color(0xFF6366F1),
+      'wordRange': '81-120',
+    },
+    {
+      'level': 4,
+      'icon': '🎯',
+      'title': 'Advanced',
+      'subtitle': 'Master level words',
+      'color': Color(0xFF8B5CF6),
+      'wordRange': '121-160',
+    },
+    {
+      'level': 5,
+      'icon': '👑',
+      'title': 'Expert',
+      'subtitle': 'Championship level',
+      'color': Color(0xFFEC4899),
+      'wordRange': '161-200',
+    },
+  ];
 
   final List<Map<String, dynamic>> ranges = [
     {
       'min': 10,
       'max': 20,
-      'icon': '🌱',
-      'title': 'Beginner',
-      'subtitle': 'Perfect for starting',
-      'color': Color(0xFF10B981),
+      'label': '10-20 words',
     },
     {
       'min': 20,
       'max': 30,
-      'icon': '🌿',
-      'title': 'Intermediate',
-      'subtitle': 'Challenge yourself',
-      'color': Color(0xFF6366F1),
+      'label': '20-30 words',
     },
     {
       'min': 30,
       'max': 40,
-      'icon': '🌳',
-      'title': 'Advanced',
-      'subtitle': 'Master level',
-      'color': Color(0xFF8B5CF6),
+      'label': '30-40 words',
     },
   ];
 
@@ -72,14 +107,11 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal> {
                     color: Color(0xFFF8F9FF),
                     shape: BoxShape.circle,
                   ),
-                  child: Text(
-                    '📚',
-                    style: TextStyle(fontSize: 32),
-                  ),
+                  child: Text('📚', style: TextStyle(fontSize: 32)),
                 ),
                 SizedBox(height: 16),
                 Text(
-                  'How many words?',
+                  'Choose Your Level',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -88,7 +120,7 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Choose your learning goal for today',
+                  'Pick a difficulty level first',
                   style: TextStyle(
                     fontSize: 16,
                     color: Color(0xFF6B7280),
@@ -99,152 +131,185 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal> {
           ),
           SizedBox(height: 32),
 
-          // Range Options
+          // Category Selection
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 24),
             child: Column(
-              children: List.generate(ranges.length, (index) {
-                final range = ranges[index];
-                final isSelected = selectedRange == index;
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Step 1: Select Difficulty',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+                SizedBox(height: 16),
+                Container(
+                  height: 140,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: categories.length,
+                    itemBuilder: (context, index) {
+                      final category = categories[index];
+                      final isSelected = selectedCategory == index;
 
-                return Padding(
-                  padding: EdgeInsets.only(bottom: 16),
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        selectedRange = index;
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: Duration(milliseconds: 200),
-                      padding: EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? range['color'].withOpacity(0.1)
-                            : Colors.grey[50],
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color:
-                              isSelected ? range['color'] : Colors.grey[200]!,
-                          width: isSelected ? 2 : 1,
-                        ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: range['color'].withOpacity(0.2),
-                                  blurRadius: 12,
-                                  offset: Offset(0, 4),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Row(
-                        children: [
-                          // Icon
-                          Container(
-                            width: 56,
-                            height: 56,
-                            decoration: BoxDecoration(
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedCategory = index;
+                            selectedRange = null; // Reset range selection
+                          });
+                        },
+                        child: Container(
+                          width: 120,
+                          margin: EdgeInsets.only(right: 12),
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? category['color'].withOpacity(0.1)
+                                : Colors.grey[50],
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
                               color: isSelected
-                                  ? range['color']
-                                  : Colors.grey[200],
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Center(
-                              child: Text(
-                                range['icon'],
-                                style: TextStyle(fontSize: 28),
-                              ),
+                                  ? category['color']
+                                  : Colors.grey[200]!,
+                              width: isSelected ? 2 : 1,
                             ),
                           ),
-                          SizedBox(width: 16),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                category['icon'],
+                                style: TextStyle(fontSize: 32),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                category['title'],
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected
+                                      ? category['color']
+                                      : Color(0xFF1F2937),
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Level ${category['level']}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 24),
 
-                          // Text Content
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+          // Range Selection (only shown after category is selected)
+          if (selectedCategory != null) ...[
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Step 2: How many words?',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Column(
+                    children: List.generate(ranges.length, (index) {
+                      final range = ranges[index];
+                      final isSelected = selectedRange == index;
+                      final categoryColor =
+                          categories[selectedCategory!]['color'];
+
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: 12),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              selectedRange = index;
+                            });
+                          },
+                          child: Container(
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? categoryColor.withOpacity(0.1)
+                                  : Colors.grey[50],
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected
+                                    ? categoryColor
+                                    : Colors.grey[200]!,
+                                width: isSelected ? 2 : 1,
+                              ),
+                            ),
+                            child: Row(
                               children: [
-                                Text(
-                                  range['title'],
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
+                                Container(
+                                  padding: EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
                                     color: isSelected
-                                        ? range['color']
-                                        : Color(0xFF1F2937),
+                                        ? categoryColor
+                                        : Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.bookmark,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.grey[600],
+                                    size: 20,
                                   ),
                                 ),
-                                SizedBox(height: 4),
-                                Text(
-                                  range['subtitle'],
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF6B7280),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    range['label'],
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected
+                                          ? categoryColor
+                                          : Color(0xFF1F2937),
+                                    ),
                                   ),
                                 ),
+                                if (isSelected)
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: categoryColor,
+                                    size: 24,
+                                  ),
                               ],
                             ),
                           ),
-
-                          // Word Count Badge
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? range['color']
-                                  : Colors.grey[200],
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '${range['min']}-${range['max']}',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: isSelected
-                                    ? Colors.white
-                                    : Color(0xFF6B7280),
-                              ),
-                            ),
-                          ),
-
-                          // Checkmark
-                          SizedBox(width: 12),
-                          AnimatedContainer(
-                            duration: Duration(milliseconds: 200),
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? range['color']
-                                  : Colors.transparent,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected
-                                    ? range['color']
-                                    : Colors.grey[300]!,
-                                width: 2,
-                              ),
-                            ),
-                            child: isSelected
-                                ? Icon(
-                                    Icons.check,
-                                    size: 16,
-                                    color: Colors.white,
-                                  )
-                                : null,
-                          ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    }),
                   ),
-                );
-              }),
+                ],
+              ),
             ),
-          ),
-          SizedBox(height: 16),
+            SizedBox(height: 16),
+          ],
 
           // Start Button
           Padding(
@@ -253,22 +318,33 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: selectedRange != null
+                onPressed: selectedCategory != null && selectedRange != null
                     ? () {
+                        final category = categories[selectedCategory!];
                         final range = ranges[selectedRange!];
+
+                        // Calculate the start and end based on category and range
+                        final categoryStart = (category['level'] - 1) * 40 + 1;
+                        final selectedCount = range['min'] +
+                            ((range['max'] - range['min']) ~/
+                                2); // Use middle value
+
                         Navigator.pop(context, {
-                          'min': range['min'],
-                          'max': range['max'],
-                          'count': range[
-                              'min'], // or calculate random between min-max
+                          'difficulty': category['level'],
+                          'count': selectedCount,
+                          'start': categoryStart,
+                          'end': categoryStart + selectedCount - 1,
+                          'categoryName': category['title'],
                         });
                       }
                     : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: selectedRange != null
-                      ? ranges[selectedRange!]['color']
-                      : Colors.grey[300],
-                  elevation: selectedRange != null ? 4 : 0,
+                  backgroundColor:
+                      selectedCategory != null && selectedRange != null
+                          ? categories[selectedCategory!]['color']
+                          : Colors.grey[300],
+                  elevation:
+                      selectedCategory != null && selectedRange != null ? 4 : 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -282,7 +358,7 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: selectedRange != null
+                        color: selectedCategory != null && selectedRange != null
                             ? Colors.white
                             : Colors.grey[500],
                       ),
@@ -290,7 +366,7 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal> {
                     SizedBox(width: 8),
                     Icon(
                       Icons.arrow_forward_rounded,
-                      color: selectedRange != null
+                      color: selectedCategory != null && selectedRange != null
                           ? Colors.white
                           : Colors.grey[500],
                     ),
@@ -303,28 +379,5 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal> {
         ],
       ),
     );
-  }
-}
-
-// How to use this in your button/screen:
-void showVocabularySelection(BuildContext context) async {
-  final result = await showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) => VocabularySelectionModal(),
-  );
-
-  if (result != null) {
-    print('Selected range: ${result['min']}-${result['max']}');
-    print('Starting with ${result['count']} words');
-
-    // Navigate to learning screen with the selected count
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (context) => LearningScreen(wordCount: result['count']),
-    //   ),
-    // );
   }
 }

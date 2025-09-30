@@ -153,7 +153,7 @@ class LearningBloc extends Bloc<LearningEvent, LearningState> {
       final filteredCards = vocabularyCards
           .where((card) =>
               card.word.toLowerCase().contains(event.query.toLowerCase()) ||
-              card.meaning.toLowerCase().contains(event.query.toLowerCase()))
+              card.definition.toLowerCase().contains(event.query.toLowerCase()))
           .take(event.limit)
           .toList();
 

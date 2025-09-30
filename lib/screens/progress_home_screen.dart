@@ -9,6 +9,7 @@ import 'learning_screen.dart';
 import 'quiz_screen.dart';
 import 'profile_screen.dart';
 import '../widgets/vocabulary_selection_modal.dart';
+import '../screens/dynamic_learning_screen.dart';
 
 class ProgressHomeScreen extends StatelessWidget {
   @override
@@ -773,8 +774,10 @@ class ProgressHomeScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => LearningScreen(
+                  builder: (context) => DynamicLearningScreen(
                     wordCount: result['count'],
+                    difficulty: result['difficulty'],
+                    categoryName: result['categoryName'],
                   ),
                 ),
               );
