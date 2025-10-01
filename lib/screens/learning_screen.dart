@@ -498,8 +498,9 @@ class _LearningScreenState extends State<LearningScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => QuizScreen(
-              quizType: 'Mixed',
-              questionCount: 10,
+              difficulty: 1,
+              limit: 10,
+              testType: 'synonyms',
             ),
           ),
         );

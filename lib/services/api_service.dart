@@ -6,6 +6,7 @@ import '../models/child_user.dart';
 import '../models/vocabulary_card.dart';
 import '../models/exam_question.dart';
 import '../models/exam_result.dart';
+import '../models/quiz_result.dart';
 
 class ApiResponse<T> {
   final bool success;
@@ -583,6 +584,52 @@ class ApiService {
     } catch (e) {
       throw Exception('Error fetching vocabulary: $e');
     }
+  }
+
+  // Save quiz result
+  Future<QuizResultResponse> saveQuizResult(
+      String token, QuizResult quizResult) async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}/quiz-results');
+      final response = await _client
+          .post(
+            uri,
+            headers: {
+              ...ApiConstants.defaultHeaders,
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode(quizResult.toJson()),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonData = jsonDecode(response.body);
+        return QuizResultResponse.fromJson(jsonData);
+      } else {
+        throw Exception('Failed to save quiz result: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error saving quiz result: $e');
+    }
+  }
+
+  // Batch save quiz results
+  Future<List<QuizResultResponse>> saveQuizResults(
+    String token,
+    List<QuizResult> quizResults,
+  ) async {
+    List<QuizResultResponse> responses = [];
+
+    for (var result in quizResults) {
+      try {
+        final response = await saveQuizResult(token, result);
+        responses.add(response);
+      } catch (e) {
+        print('Error saving result for word ${result.wordId}: $e');
+      }
+    }
+
+    return responses;
   }
 
   // ==================== CLEANUP ====================

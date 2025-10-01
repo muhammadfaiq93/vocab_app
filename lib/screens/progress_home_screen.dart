@@ -10,6 +10,7 @@ import 'quiz_screen.dart';
 import 'profile_screen.dart';
 import '../widgets/vocabulary_selection_modal.dart';
 import '../screens/dynamic_learning_screen.dart';
+import '../widgets/quiz_selection_modal.dart';
 
 class ProgressHomeScreen extends StatelessWidget {
   @override
@@ -66,6 +67,8 @@ class ProgressHomeScreen extends StatelessWidget {
                             _buildAchievements(),
                             SizedBox(height: 20),
                             _buildContinueLearningButton(context),
+                            SizedBox(height: 40),
+                            _buildQuizButton(context),
                             SizedBox(height: 40),
                           ],
                         ),
@@ -353,8 +356,9 @@ class ProgressHomeScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => QuizScreen(
-                        quizType: 'Mixed',
-                        questionCount: 10,
+                        difficulty: 1,
+                        limit: 10,
+                        testType: 'synonyms',
                       ),
                     ),
                   );
@@ -778,6 +782,55 @@ class ProgressHomeScreen extends StatelessWidget {
                     wordCount: result['count'],
                     difficulty: result['difficulty'],
                     categoryName: result['categoryName'],
+                  ),
+                ),
+              );
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primaryBlue,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: Text(
+            AppStrings.continueLearning,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuizButton(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        width: double.infinity,
+        height: 56,
+        child: ElevatedButton(
+          onPressed: () async {
+            final result = await showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (context) => QuizSelectionModal(),
+            );
+
+            if (result != null) {
+              // Navigate to learning screen with selected word count
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuizScreen(
+                    difficulty: result['difficulty'],
+                    limit: result['limit'],
+                    testType: result['testType'],
                   ),
                 ),
               );
