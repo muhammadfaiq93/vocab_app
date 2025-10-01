@@ -101,11 +101,23 @@ class _QuizScreenState extends State<QuizScreen> {
     _questionTimer?.cancel();
 
     final currentWord = _vocabularyList[_currentQuestionIndex];
-    final correctAnswers = widget.testType == 'synonyms'
-        ? currentWord.synonyms
-        : currentWord.antonyms;
+    // final correctAnswers = widget.testType == 'synonyms'
+    //     ? currentWord.synonyms
+    //     : currentWord.antonyms;
 
-    final isCorrect = correctAnswers.contains(_selectedAnswer);
+    // final isCorrect = correctAnswers.contains(_selectedAnswer);
+
+    bool isCorrect;
+    if (widget.testType == 'meaning') {
+      // For meaning test, the correct answer is the definition
+      isCorrect = _selectedAnswer == currentWord.definition;
+    } else {
+      // For synonyms/antonyms, check if answer is in the list
+      final correctAnswers = widget.testType == 'synonyms'
+          ? currentWord.synonyms
+          : currentWord.antonyms;
+      isCorrect = correctAnswers.contains(_selectedAnswer);
+    }
 
     // Save quiz result
     final quizResult = QuizResult(
@@ -220,14 +232,55 @@ class _QuizScreenState extends State<QuizScreen> {
     }
 
     final currentWord = _vocabularyList[_currentQuestionIndex];
-    final choices = (widget.testType == 'synonyms'
-            ? currentWord.synonymChoices
-            : currentWord.antonymChoices) ??
-        [];
-    final correctAnswers = (widget.testType == 'synonyms'
-            ? currentWord.synonyms
-            : currentWord.antonyms) ??
-        [];
+    // Get choices based on test type
+    final choices = widget.testType == 'synonyms'
+        ? (currentWord.synonymChoices ?? [])
+        : widget.testType == 'antonyms'
+            ? (currentWord.antonymChoices ?? [])
+            : (currentWord.meaningChoices ?? []);
+
+    // Get correct answer(s) based on test type
+    final correctAnswer =
+        widget.testType == 'meaning' ? currentWord.definition : null;
+    final correctAnswers = widget.testType == 'synonyms'
+        ? currentWord.synonyms
+        : widget.testType == 'antonyms'
+            ? currentWord.antonyms
+            : [];
+
+    // Check if choices are empty
+    if (choices.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Quiz'),
+          backgroundColor: Color(0xFF3B82F6),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.warning_amber_rounded, size: 64, color: Colors.orange),
+              SizedBox(height: 16),
+              Text(
+                'No answer choices available',
+                style: TextStyle(fontSize: 18),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'for "${currentWord.word}"',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Color(0xFFF9FAFB),
@@ -338,7 +391,9 @@ class _QuizScreenState extends State<QuizScreen> {
                         Text(
                           widget.testType == 'synonyms'
                               ? 'Find the Synonym'
-                              : 'Find the Antonym',
+                              : widget.testType == 'antonyms'
+                                  ? 'Find the Antonym'
+                                  : 'What does this word mean?',
                           style: TextStyle(
                             fontSize: 16,
                             color: Color(0xFF6B7280),
@@ -363,32 +418,52 @@ class _QuizScreenState extends State<QuizScreen> {
                             fontStyle: FontStyle.italic,
                           ),
                         ),
-                        SizedBox(height: 16),
-                        Text(
-                          currentWord.definition,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF4B5563),
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        Container(
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '"${currentWord.example}"',
+                        if (widget.testType != 'meaning') ...[
+                          SizedBox(height: 16),
+                          Text(
+                            currentWord.definition,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF6B7280),
-                              fontStyle: FontStyle.italic,
+                              fontSize: 16,
+                              color: Color(0xFF4B5563),
                             ),
                           ),
-                        ),
+                          SizedBox(height: 12),
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '"${currentWord.example}"',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF6B7280),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          SizedBox(height: 12),
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFF0F9FF),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Select the correct definition',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF3B82F6),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -397,7 +472,14 @@ class _QuizScreenState extends State<QuizScreen> {
                   // Answer Choices
                   ...choices.map((choice) {
                     final isSelected = _selectedAnswer == choice;
-                    final isCorrect = correctAnswers.contains(choice);
+
+                    // Determine if this choice is correct
+                    bool isCorrect;
+                    if (widget.testType == 'meaning') {
+                      isCorrect = choice == correctAnswer;
+                    } else {
+                      isCorrect = correctAnswers.contains(choice);
+                    }
 
                     Color cardColor = Colors.white;
                     Color borderColor = Colors.grey[200]!;
@@ -458,10 +540,14 @@ class _QuizScreenState extends State<QuizScreen> {
                                 child: Text(
                                   choice,
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize:
+                                        widget.testType == 'meaning' ? 15 : 16,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF1F2937),
                                   ),
+                                  maxLines:
+                                      widget.testType == 'meaning' ? 3 : 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (_showResult && isCorrect)

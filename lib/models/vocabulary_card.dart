@@ -10,6 +10,7 @@ class VocabularyCard {
   final List<String>? synonymChoices; // Add this
   final List<String> antonyms;
   final List<String>? antonymChoices; // Add this
+  final List<String>? meaningChoices; // Add this
   final String category;
   final int difficultyLevel;
   final bool isFavorite;
@@ -28,6 +29,7 @@ class VocabularyCard {
     this.synonymChoices,
     required this.antonyms,
     this.antonymChoices,
+    this.meaningChoices,
     required this.category,
     required this.difficultyLevel,
     this.isFavorite = false,
@@ -48,6 +50,7 @@ class VocabularyCard {
       synonymChoices: _parseJsonList(json['synonym_choices']),
       antonyms: _parseJsonList(json['antonyms']),
       antonymChoices: _parseJsonList(json['antonym_choices']),
+      meaningChoices: _parseJsonList(json['meaning_choices']),
       category: json['category'] ?? '',
       difficultyLevel: json['difficulty_level'] ?? 1,
       isFavorite: json['is_favorite'] ?? false,
@@ -94,6 +97,7 @@ class VocabularyCard {
       'synonym_choices': synonymChoices,
       'antonyms': antonyms,
       'antonym_choices': antonymChoices,
+      'meaning_choices': meaningChoices,
       'category': category,
       'difficulty_level': difficultyLevel,
       'is_favorite': isFavorite,

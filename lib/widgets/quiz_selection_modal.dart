@@ -73,10 +73,10 @@ class _QuizSelectionModalState extends State<QuizSelectionModal>
     },
     {
       'type': 'meaning',
-      'icon': '⚖️',
+      'icon': '📖',
       'title': 'Meaning',
-      'subtitle': 'Words meaning',
-    },
+      'subtitle': 'Match definition',
+    }
   ];
 
   @override
