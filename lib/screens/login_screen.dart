@@ -38,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (state is AuthAuthenticated) {
           print('Login successful');
           Navigator.pushReplacementNamed(
-              context, AppRoutes.homeProgress); // ← CORRECT
+              context, AppRoutes.progressDashboard); // ← CORRECT
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message), backgroundColor: Colors.red),

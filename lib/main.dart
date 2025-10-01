@@ -5,7 +5,8 @@ import 'blocs/auth/auth_state.dart';
 import 'services/api_service.dart';
 import 'utils/app_routes.dart';
 import 'screens/onboarding_screen.dart';
-import 'screens/progress_home_screen.dart';
+// import 'screens/progress_home_screen.dart';
+import 'screens/progress_dashboard.dart';
 
 void main() {
   runApp(MyApp());
@@ -52,17 +53,14 @@ class AuthWrapper extends StatelessWidget {
         print('Current AuthState: ${state.runtimeType}');
 
         if (state is AuthAuthenticated) {
-          print('Navigating to ProgressHomeScreen');
-          return ProgressHomeScreen();
+          return ProgressDashboard();
         } else if (state is AuthLoading) {
-          print('Showing loading screen');
           return Scaffold(
             body: Center(
               child: CircularProgressIndicator(),
             ),
           );
         } else {
-          print('Showing OnboardingScreen');
           return OnboardingScreen();
         }
       },

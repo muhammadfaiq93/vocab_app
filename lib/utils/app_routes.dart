@@ -13,12 +13,16 @@ import '../screens/exam_screen.dart';
 import '../blocs/learning/learning_bloc.dart';
 import '../blocs/exam/exam_bloc.dart';
 import '../services/api_service.dart';
+import '../screens/dashboard_screen.dart';
+import '../screens/progress_dashboard.dart';
 
 class AppRoutes {
   static const String welcome = '/';
   static const String login = '/login';
   static const String home = '/home';
   static const String homeProgress = '/homeprogress';
+  static const String dashboard = '/dashboard';
+  static const String progressDashboard = '/progressdashboard';
   static const String learning = '/learning';
   static const String exam = '/exam';
   static const String profile = '/profile';
@@ -45,6 +49,14 @@ class AppRoutes {
       case homeProgress:
         return MaterialPageRoute(
           builder: (_) => ProgressHomeScreen(),
+        );
+      case dashboard:
+        return MaterialPageRoute(
+          builder: (_) => DashboardScreen(),
+        );
+      case progressDashboard:
+        return MaterialPageRoute(
+          builder: (_) => ProgressDashboard(),
         );
       case learning:
         return MaterialPageRoute(
