@@ -7,6 +7,7 @@ class StorageService {
   static const String _keyUserName = 'user_name';
   static const String _keyUserEmail = 'user_email';
   static const String _keyUserAge = 'user_age';
+  static const String _keyUserAvatar = 'user_avatar';
   static const String _keyAuthToken = 'auth_token';
 
   // Singleton
@@ -24,6 +25,7 @@ class StorageService {
   ChildUser? get currentUser => _currentUser;
   String? get authToken => _authToken;
   int? get userId => _currentUser?.id;
+  String? get userAvatar => _currentUser?.avatar;
 
   // Initialize - Load saved data
   Future<void> initialize() async {
@@ -38,6 +40,7 @@ class StorageService {
       final userName = prefs.getString(_keyUserName);
       final userEmail = prefs.getString(_keyUserEmail);
       final userAge = prefs.getInt(_keyUserAge);
+      final userAvatar = prefs.getString(_keyUserAvatar);
 
       if (userId != null && userName != null && userEmail != null) {
         _currentUser = ChildUser(
@@ -45,6 +48,7 @@ class StorageService {
           name: userName,
           email: userEmail,
           age: userAge ?? 0,
+          avatar: userAvatar,
         );
       }
     }
@@ -59,6 +63,9 @@ class StorageService {
     await prefs.setString(_keyUserName, user.name);
     await prefs.setString(_keyUserEmail, user.email);
     await prefs.setInt(_keyUserAge, user.age!);
+    if (user.avatar != null) {
+      await prefs.setString(_keyUserAvatar, user.avatar!);
+    }
     await prefs.setString(_keyAuthToken, token);
 
     // Update cached values

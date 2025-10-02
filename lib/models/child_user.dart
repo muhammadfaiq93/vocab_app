@@ -3,7 +3,7 @@ class ChildUser {
   final String name;
   final String email;
   final int? age;
-  final String? profileImage;
+  final String? avatar;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -12,7 +12,7 @@ class ChildUser {
     required this.name,
     required this.email,
     this.age,
-    this.profileImage,
+    this.avatar,
     this.createdAt,
     this.updatedAt,
   });
@@ -24,7 +24,7 @@ class ChildUser {
       name: json['name'] ?? '',
       email: json['email'] ?? '',
       age: json['age'],
-      profileImage: json['profile_image'],
+      avatar: json['avatar'],
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])
           : null,
@@ -41,7 +41,7 @@ class ChildUser {
       'name': name,
       'email': email,
       'age': age,
-      'profile_image': profileImage,
+      'avatar': avatar,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -54,7 +54,7 @@ class ChildUser {
       'name': name,
       'email': email,
       'age': age,
-      'profile_image': profileImage,
+      'avatar': avatar,
     };
   }
 
@@ -64,7 +64,7 @@ class ChildUser {
     String? name,
     String? email,
     int? age,
-    String? profileImage,
+    String? avatar,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -73,7 +73,7 @@ class ChildUser {
       name: name ?? this.name,
       email: email ?? this.email,
       age: age ?? this.age,
-      profileImage: profileImage ?? this.profileImage,
+      avatar: avatar ?? this.avatar,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

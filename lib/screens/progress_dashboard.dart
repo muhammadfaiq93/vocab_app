@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'dart:math' as math;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../constants/app_colors.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../blocs/auth/auth_event.dart';
+import '../widgets/user_avatar.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../models/dashboard_data.dart';
-import 'login_screen.dart';
+import '../widgets/quiz_selection_modal.dart';
+import '../widgets/vocabulary_selection_modal.dart';
+import 'dynamic_learning_screen.dart';
+import 'quiz_screen.dart';
 
 class ProgressDashboard extends StatefulWidget {
   @override
@@ -54,9 +59,6 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final storage = StorageService();
-    final firstName = storage.currentUser?.name.split(' ').first ?? 'User';
-
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -73,7 +75,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context, firstName),
+              _buildHeader(context),
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
@@ -94,6 +96,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
           ),
         ),
       ),
+      floatingActionButton: _buildSpeedDial(),
     );
   }
 
@@ -165,6 +168,8 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
             SizedBox(height: 24),
             _buildCalendarHeatmap(),
             SizedBox(height: 24),
+            _buildQuickActions(),
+            SizedBox(height: 24),
             _buildStreakSection(),
           ],
         ),
@@ -172,7 +177,11 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, String firstName) {
+  Widget _buildHeader(BuildContext context) {
+    final storage = StorageService();
+    final avatarPath = storage.currentUser?.avatar;
+    final fullName = storage.currentUser?.name ?? 'User';
+    final firstName = storage.currentUser?.name.split(' ').first ?? 'User';
     return Padding(
       padding: EdgeInsets.all(20),
       child: Column(
@@ -183,30 +192,12 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        firstName[0].toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF6366F1),
-                        ),
-                      ),
-                    ),
+                  UserAvatar(
+                    userName: fullName,
+                    avatarPath: avatarPath,
+                    size: 50,
+                    showBorder: true,
+                    backgroundColor: Colors.white,
                   ),
                   SizedBox(width: 12),
                   Text(
@@ -702,6 +693,151 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
     );
   }
 
+  Widget _buildQuickActions() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Actions',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1F2937),
+          ),
+        ),
+        SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                title: 'Take Quiz',
+                subtitle: 'Test your knowledge',
+                icon: Icons.quiz_outlined,
+                gradient: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                onTap: () {
+                  _showQuizModal(context);
+                },
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
+                title: 'Learn Words',
+                subtitle: 'Study vocabulary',
+                icon: Icons.book_outlined,
+                gradient: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                onTap: () {
+                  _showLearningModal(context);
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required List<Color> gradient,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: gradient,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: gradient[0].withOpacity(0.3),
+              blurRadius: 15,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: Colors.white, size: 28),
+            ),
+            SizedBox(height: 16),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.9),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showQuizModal(BuildContext context) async {
+    final result = await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => QuizSelectionModal(),
+    );
+
+    if (result != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QuizScreen(
+            difficulty: result['difficulty'],
+            limit: result['limit'],
+            testType: result['testType'],
+          ),
+        ),
+      );
+    }
+  }
+
+  void _showLearningModal(BuildContext context) async {
+    final result = await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => VocabularySelectionModal(),
+    );
+
+    if (result != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DynamicLearningScreen(
+              difficulty: result['difficulty'], wordCount: result['count']),
+        ),
+      );
+    }
+  }
+
   Widget _buildStreakSection() {
     final streak = _dashboardData!.streak;
 
@@ -828,5 +964,44 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
   String _capitalize(String text) {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1);
+  }
+
+  Widget _buildSpeedDial() {
+    return SpeedDial(
+      icon: Icons.add,
+      activeIcon: Icons.close,
+      backgroundColor: Color(0xFF6366F1),
+      foregroundColor: Colors.white,
+      overlayColor: Colors.black,
+      overlayOpacity: 0.5,
+      spacing: 12,
+      childPadding: EdgeInsets.all(5),
+      spaceBetweenChildren: 10,
+      children: [
+        SpeedDialChild(
+          child: Icon(Icons.quiz_outlined, color: Colors.white),
+          backgroundColor: Color(0xFF3B82F6),
+          label: 'Take Quiz',
+          labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          onTap: () => _showQuizModal(context),
+        ),
+        SpeedDialChild(
+          child: Icon(Icons.book_outlined, color: Colors.white),
+          backgroundColor: Color(0xFF8B5CF6),
+          label: 'Learn Words',
+          labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          onTap: () => _showLearningModal(context),
+        ),
+        SpeedDialChild(
+          child: Icon(Icons.school_outlined, color: Colors.white),
+          backgroundColor: Color(0xFF10B981),
+          label: 'Practice',
+          labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          onTap: () {
+            // Navigate to practice screen
+          },
+        ),
+      ],
+    );
   }
 }
