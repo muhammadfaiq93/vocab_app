@@ -11,20 +11,21 @@ import 'profile_screen.dart';
 import '../widgets/vocabulary_selection_modal.dart';
 import '../screens/dynamic_learning_screen.dart';
 import '../widgets/quiz_selection_modal.dart';
+import '../services/storage_service.dart';
 
 class ProgressHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final storage = StorageService();
+    final fullName = storage.currentUser?.name ?? 'User';
+    final firstName = storage.currentUser?.name.split(' ').first ?? 'User';
+    final email = storage.currentUser?.email ?? '';
+    final userId = storage.userId ?? 0;
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is! AuthAuthenticated) {
           return Center(child: CircularProgressIndicator());
         }
-
-        final user = state.user;
-        String userName = user['name'] ?? '';
-        String firstName =
-            userName.isNotEmpty ? userName.split(' ').first : 'User';
 
         return Scaffold(
           body: Container(

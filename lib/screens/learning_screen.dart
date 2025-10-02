@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../blocs/auth/auth_state.dart';
 import 'quiz_screen.dart';
+import '../services/storage_service.dart';
 
 class LearningScreen extends StatefulWidget {
   final int? wordCount; // Add this parameter
@@ -60,13 +61,17 @@ class _LearningScreenState extends State<LearningScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final storage = StorageService();
+    final fullName = storage.currentUser?.name ?? 'User';
+    final firstName = storage.currentUser?.name.split(' ').first ?? 'User';
+    final email = storage.currentUser?.email ?? '';
+    final userId = storage.userId ?? 0;
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is! AuthAuthenticated) {
           return Center(child: Text('Please log in to access learning'));
         }
 
-        final user = state.user;
         final currentWord = vocabularyWords[currentWordIndex];
 
         return Scaffold(
@@ -84,7 +89,7 @@ class _LearningScreenState extends State<LearningScreen> {
             child: SafeArea(
               child: Column(
                 children: [
-                  _buildHeader(user),
+                  _buildHeader(firstName),
                   Expanded(
                     child: Container(
                       margin: EdgeInsets.only(top: 20),
@@ -121,16 +126,7 @@ class _LearningScreenState extends State<LearningScreen> {
     );
   }
 
-  Widget _buildHeader(Map<String, dynamic> user) {
-    // String firstName = user['name']?.split(' ').first ?? 'User';
-
-    String userName = user['name']?.toString().trim() ?? '';
-    String firstName = userName.isNotEmpty ? userName.split(' ').first : 'User';
-
-    // Safely get the first initial with fallback
-    String userInitial =
-        firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
-
+  Widget _buildHeader(firstName) {
     return Padding(
       padding: EdgeInsets.all(20),
       child: Column(
@@ -146,7 +142,7 @@ class _LearningScreenState extends State<LearningScreen> {
                     radius: 16,
                     backgroundColor: Colors.white.withOpacity(0.2),
                     child: Text(
-                      firstName[0].toUpperCase(),
+                      firstName,
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -156,7 +152,7 @@ class _LearningScreenState extends State<LearningScreen> {
                   ),
                   SizedBox(width: 8),
                   Text(
-                    'Sm Jony',
+                    firstName,
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,

@@ -53,17 +53,8 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Future<void> _loadVocabulary() async {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) {
-      setState(() {
-        errorMessage = 'Please login to continue';
-        isLoading = false;
-      });
-      return;
-    }
     try {
       final words = await _apiService.getVocabularyByDifficulty(
-        token: authState.token,
         difficulty: widget.difficulty, // Pass from modal
         count: widget.limit,
       );
@@ -175,7 +166,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
     // Save all results to API
     try {
-      await _apiService.saveQuizResults(authState.token, _quizResults);
+      await _apiService.saveQuizResults(_quizResults);
     } catch (e) {
       print('Error saving results: $e');
     }

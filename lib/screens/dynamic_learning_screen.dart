@@ -35,18 +35,8 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
   }
 
   Future<void> _fetchVocabulary() async {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) {
-      setState(() {
-        errorMessage = 'Please login to continue';
-        isLoading = false;
-      });
-      return;
-    }
-
     try {
       final cards = await _apiService.getVocabularyByDifficulty(
-        token: authState.token,
         difficulty: widget.difficulty, // Pass from modal
         count: widget.wordCount,
       );

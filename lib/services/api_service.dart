@@ -7,6 +7,8 @@ import '../models/vocabulary_card.dart';
 import '../models/exam_question.dart';
 import '../models/exam_result.dart';
 import '../models/quiz_result.dart';
+import '../models/dashboard_data.dart';
+import 'storage_service.dart';
 
 class ApiResponse<T> {
   final bool success;
@@ -553,11 +555,11 @@ class ApiService {
 
   /// Get vocabulary by difficulty level and count
   Future<List<VocabularyCard>> getVocabularyByDifficulty({
-    required String token,
     required int difficulty,
     required int count,
   }) async {
     try {
+      String token = StorageService().authToken!;
       final uri = Uri.parse('${ApiConstants.baseUrl}/vocabulary').replace(
         queryParameters: {
           'difficulty': difficulty.toString(),
@@ -587,9 +589,9 @@ class ApiService {
   }
 
   // Save quiz result
-  Future<QuizResultResponse> saveQuizResult(
-      String token, QuizResult quizResult) async {
+  Future<QuizResultResponse> saveQuizResult(QuizResult quizResult) async {
     try {
+      String token = StorageService().authToken!;
       final uri = Uri.parse('${ApiConstants.baseUrl}/quiz-results');
       final response = await _client
           .post(
@@ -615,14 +617,12 @@ class ApiService {
 
   // Batch save quiz results
   Future<List<QuizResultResponse>> saveQuizResults(
-    String token,
-    List<QuizResult> quizResults,
-  ) async {
+      List<QuizResult> quizResults) async {
     List<QuizResultResponse> responses = [];
 
     for (var result in quizResults) {
       try {
-        final response = await saveQuizResult(token, result);
+        final response = await saveQuizResult(result);
         responses.add(response);
       } catch (e) {
         print('Error saving result for word ${result.wordId}: $e');
@@ -630,6 +630,66 @@ class ApiService {
     }
 
     return responses;
+  }
+
+  // ==================== DASHBOARD METHODS ====================
+
+  /// Get complete dashboard data
+  Future<DashboardData> getDashboardData({
+    required String token,
+  }) async {
+    try {
+      final response = await _client.get(
+        Uri.parse('${ApiConstants.baseUrl}/dashboard'),
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return DashboardData.fromJson(jsonData['data'] ?? {});
+      } else {
+        throw Exception(
+            'Failed to load dashboard data: ${response.statusCode}');
+      }
+    } on SocketException {
+      throw Exception('No internet connection');
+    } on HttpException {
+      throw Exception('Network error occurred');
+    } catch (e) {
+      throw Exception('Error fetching dashboard data: $e');
+    }
+  }
+
+  /// Get words that need practice
+  Future<List<WeakWord>> getWeakWords({
+    required String token,
+  }) async {
+    try {
+      final response = await _client.get(
+        Uri.parse('${ApiConstants.baseUrl}/dashboard/weak-words'),
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final List<dynamic> wordsJson = jsonData['data'] ?? [];
+        return wordsJson.map((json) => WeakWord.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to load weak words: ${response.statusCode}');
+      }
+    } on SocketException {
+      throw Exception('No internet connection');
+    } on HttpException {
+      throw Exception('Network error occurred');
+    } catch (e) {
+      throw Exception('Error fetching weak words: $e');
+    }
   }
 
   // ==================== CLEANUP ====================

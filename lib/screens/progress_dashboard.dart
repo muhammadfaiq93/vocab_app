@@ -1,48 +1,62 @@
-// lib/screens/progress_dashboard.dart
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../constants/app_colors.dart';
+import '../blocs/auth/auth_bloc.dart';
+import '../blocs/auth/auth_event.dart';
+import '../services/api_service.dart';
+import '../services/storage_service.dart';
+import '../models/dashboard_data.dart';
+import 'login_screen.dart';
 
 class ProgressDashboard extends StatefulWidget {
-  final String userName = "Faiq";
-  final int childId = 2;
-
-  const ProgressDashboard();
-  //   {
-  //   Key? key,
-  //   required this.userName,
-  //   required this.childId,
-  // }) : super(key: key);
-
   @override
   _ProgressDashboardState createState() => _ProgressDashboardState();
 }
 
 class _ProgressDashboardState extends State<ProgressDashboard> {
-  // Mock data - Replace with API
-  final List<DayProgress> weeklyData = [
-    DayProgress('Mon', 8, 85),
-    DayProgress('Tue', 12, 92),
-    DayProgress('Wed', 6, 75),
-    DayProgress('Thu', 10, 88),
-    DayProgress('Fri', 7, 82),
-    DayProgress('Sat', 5, 70),
-    DayProgress('Sun', 15, 95),
-  ];
+  final ApiService _apiService = ApiService();
+  bool _isLoading = true;
+  DashboardData? _dashboardData;
+  String? _errorMessage;
 
-  final Map<DateTime, int> heatmapData = {
-    DateTime(2025, 6, 2): 3,
-    DateTime(2025, 6, 5): 2,
-    DateTime(2025, 6, 8): 4,
-    DateTime(2025, 6, 12): 3,
-    DateTime(2025, 6, 15): 2,
-    DateTime(2025, 6, 18): 5,
-    DateTime(2025, 6, 22): 3,
-    DateTime(2025, 6, 25): 4,
-    DateTime(2025, 6, 28): 2,
-  };
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      final token = StorageService().authToken;
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final data = await _apiService.getDashboardData(token: token);
+
+      setState(() {
+        _dashboardData = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final storage = StorageService();
+    final firstName = storage.currentUser?.name.split(' ').first ?? 'User';
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -59,7 +73,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(),
+              _buildHeader(context, firstName),
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
@@ -69,23 +83,11 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                       topRight: Radius.circular(30),
                     ),
                   ),
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildStatsCards(),
-                        SizedBox(height: 24),
-                        _buildWeeklyProgress(),
-                        SizedBox(height: 24),
-                        _buildPerformanceChart(),
-                        SizedBox(height: 24),
-                        _buildCalendarHeatmap(),
-                        SizedBox(height: 24),
-                        _buildStreakSection(),
-                      ],
-                    ),
-                  ),
+                  child: _isLoading
+                      ? _buildLoadingState()
+                      : _errorMessage != null
+                          ? _buildErrorState()
+                          : _buildDashboardContent(),
                 ),
               ),
             ],
@@ -95,7 +97,82 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text(
+            'Loading your progress...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red),
+          SizedBox(height: 16),
+          Text(
+            'Failed to load dashboard',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _errorMessage ?? 'Unknown error',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF6B7280)),
+            ),
+          ),
+          SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _loadDashboardData,
+            child: Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDashboardContent() {
+    if (_dashboardData == null) return SizedBox();
+
+    return RefreshIndicator(
+      onRefresh: _loadDashboardData,
+      child: SingleChildScrollView(
+        physics: AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildStatsCards(),
+            SizedBox(height: 24),
+            _buildWeeklyProgress(),
+            SizedBox(height: 24),
+            _buildPerformanceChart(),
+            SizedBox(height: 24),
+            _buildCalendarHeatmap(),
+            SizedBox(height: 24),
+            _buildStreakSection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, String firstName) {
     return Padding(
       padding: EdgeInsets.all(20),
       child: Column(
@@ -122,8 +199,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                     ),
                     child: Center(
                       child: Text(
-                        // widget.userName[0].toUpperCase(),
-                        'Faiq',
+                        firstName[0].toUpperCase(),
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -134,7 +210,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                   ),
                   SizedBox(width: 12),
                   Text(
-                    "Faiq",
+                    firstName,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -167,9 +243,8 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                     ],
                   ),
                   IconButton(
-                    icon: Icon(Icons.person_outline,
-                        color: Colors.white, size: 28),
-                    onPressed: () {},
+                    icon: Icon(Icons.logout, color: Colors.white, size: 20),
+                    onPressed: () => _showLogoutDialog(context),
                   ),
                 ],
               ),
@@ -194,7 +269,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
             ),
           ),
           Text(
-            'Monday, June 24, 2025',
+            _formatDate(DateTime.now()),
             style: TextStyle(
               fontSize: 14,
               color: Colors.white.withOpacity(0.8),
@@ -206,35 +281,37 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
   }
 
   Widget _buildStatsCards() {
+    final stats = _dashboardData!.overallStats;
+
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
-            '63',
+            '${stats.totalQuizzes}',
             'Quizzes',
             Icons.quiz_outlined,
             Color(0xFF3B82F6),
-            '+12 this week',
+            '+${stats.quizzesThisWeek} this week',
           ),
         ),
         SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
-            '87%',
+            '${stats.accuracy}%',
             'Accuracy',
             Icons.check_circle_outline,
             Color(0xFF10B981),
-            '+5% vs last week',
+            'Great job!',
           ),
         ),
         SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
-            '245',
+            '${stats.wordsLearned}',
             'Words',
             Icons.book_outlined,
             Color(0xFF8B5CF6),
-            '45 this week',
+            '${stats.avgTimeSpent}s avg',
           ),
         ),
       ],
@@ -304,7 +381,11 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
   }
 
   Widget _buildWeeklyProgress() {
+    final weeklyData = _dashboardData!.weeklyProgress;
+    if (weeklyData.isEmpty) return SizedBox();
+
     final maxQuizzes = weeklyData.map((e) => e.quizzes).reduce(math.max);
+    final totalQuizzes = weeklyData.fold(0, (sum, item) => sum + item.quizzes);
 
     return Container(
       padding: EdgeInsets.all(20),
@@ -342,7 +423,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '63 Total',
+                  '$totalQuizzes Total',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -359,8 +440,9 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: weeklyData.map((day) {
-                final heightPercent = (day.quizzes / maxQuizzes);
-                final isToday = day.day == 'Sun';
+                final heightPercent =
+                    maxQuizzes > 0 ? (day.quizzes / maxQuizzes) : 0.0;
+                final isToday = _isToday(day.date);
 
                 return Expanded(
                   child: Padding(
@@ -381,16 +463,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                           child: Container(
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: isToday
-                                    ? [Color(0xFF6366F1), Color(0xFF8B5CF6)]
-                                    : [
-                                        Color(0xFF8B5CF6).withOpacity(0.3),
-                                        Color(0xFF6366F1).withOpacity(0.3)
-                                      ],
-                              ),
+                              color: Colors.grey[200],
                               borderRadius: BorderRadius.circular(8),
                             ),
                             alignment: Alignment.bottomCenter,
@@ -438,6 +511,15 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
   }
 
   Widget _buildPerformanceChart() {
+    final performance = _dashboardData!.performanceByType;
+    if (performance.isEmpty) return SizedBox();
+
+    final colors = {
+      'synonyms': Color(0xFF3B82F6),
+      'antonyms': Color(0xFF8B5CF6),
+      'meaning': Color(0xFF10B981),
+    };
+
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -463,11 +545,19 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
             ),
           ),
           SizedBox(height: 20),
-          _buildPerformanceBar('Synonyms', 18, 20, Color(0xFF3B82F6)),
-          SizedBox(height: 16),
-          _buildPerformanceBar('Antonyms', 15, 18, Color(0xFF8B5CF6)),
-          SizedBox(height: 16),
-          _buildPerformanceBar('Meaning', 25, 25, Color(0xFF10B981)),
+          ...performance.map((item) {
+            final color =
+                colors[item.testType.toLowerCase()] ?? Color(0xFF6366F1);
+            return Padding(
+              padding: EdgeInsets.only(bottom: 16),
+              child: _buildPerformanceBar(
+                _capitalize(item.testType),
+                item.correct,
+                item.total,
+                color,
+              ),
+            );
+          }).toList(),
         ],
       ),
     );
@@ -475,7 +565,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
 
   Widget _buildPerformanceBar(
       String label, int correct, int total, Color color) {
-    final percentage = (correct / total * 100).round();
+    final percentage = total > 0 ? (correct / total * 100).round() : 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,7 +615,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
               ),
             ),
             FractionallySizedBox(
-              widthFactor: correct / total,
+              widthFactor: total > 0 ? correct / total : 0,
               child: Container(
                 height: 12,
                 decoration: BoxDecoration(
@@ -533,13 +623,6 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                     colors: [color, color.withOpacity(0.7)],
                   ),
                   borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
                 ),
               ),
             ),
@@ -548,16 +631,15 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
         SizedBox(height: 4),
         Text(
           '$percentage% accuracy',
-          style: TextStyle(
-            fontSize: 12,
-            color: Color(0xFF6B7280),
-          ),
+          style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
         ),
       ],
     );
   }
 
   Widget _buildCalendarHeatmap() {
+    final heatmapData = _dashboardData!.activityHeatmap;
+
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -574,49 +656,28 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Activity Heatmap',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.chevron_left, color: Color(0xFF6B7280)),
-                    onPressed: () {},
-                  ),
-                  Text(
-                    'June 2025',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF6B7280),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.chevron_right, color: Color(0xFF6B7280)),
-                    onPressed: () {},
-                  ),
-                ],
-              ),
-            ],
+          Text(
+            'Activity Heatmap',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
           ),
           SizedBox(height: 16),
-          _buildCalendarGrid(),
+          Text(
+            'This Month',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF6B7280),
+            ),
+          ),
           SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text(
-                'Less',
-                style: TextStyle(fontSize: 10, color: Color(0xFF6B7280)),
-              ),
+              Text('Less',
+                  style: TextStyle(fontSize: 10, color: Color(0xFF6B7280))),
               SizedBox(width: 8),
               ...List.generate(5, (index) {
                 return Padding(
@@ -632,10 +693,8 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                 );
               }),
               SizedBox(width: 8),
-              Text(
-                'More',
-                style: TextStyle(fontSize: 10, color: Color(0xFF6B7280)),
-              ),
+              Text('More',
+                  style: TextStyle(fontSize: 10, color: Color(0xFF6B7280))),
             ],
           ),
         ],
@@ -643,54 +702,9 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
     );
   }
 
-  Widget _buildCalendarGrid() {
-    final daysInMonth = 30;
-    final firstDayOfWeek = 0; // Monday
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 7,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-      ),
-      itemCount: 35,
-      itemBuilder: (context, index) {
-        final dayNumber = index - firstDayOfWeek + 1;
-        if (dayNumber < 1 || dayNumber > daysInMonth) {
-          return SizedBox.shrink();
-        }
-
-        final date = DateTime(2025, 6, dayNumber);
-        final intensity = heatmapData[date] ?? 0;
-        final isToday = dayNumber == 25;
-
-        return Container(
-          decoration: BoxDecoration(
-            color: intensity > 0
-                ? Color(0xFF6366F1).withOpacity(0.2 * intensity)
-                : Color(0xFFF3F4F6),
-            borderRadius: BorderRadius.circular(8),
-            border:
-                isToday ? Border.all(color: Color(0xFF6366F1), width: 2) : null,
-          ),
-          child: Center(
-            child: Text(
-              '$dayNumber',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
-                color: intensity > 0 ? Color(0xFF1F2937) : Color(0xFF9CA3AF),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildStreakSection() {
+    final streak = _dashboardData!.streak;
+
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -716,10 +730,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
               shape: BoxShape.circle,
             ),
             child: Center(
-              child: Text(
-                '🔥',
-                style: TextStyle(fontSize: 32),
-              ),
+              child: Text('🔥', style: TextStyle(fontSize: 32)),
             ),
           ),
           SizedBox(width: 16),
@@ -728,7 +739,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '7 Day Streak!',
+                  '${streak.currentStreak} Day Streak!',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -736,7 +747,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                   ),
                 ),
                 Text(
-                  'Keep it up! You\'re on fire!',
+                  'Best: ${streak.bestStreak} days',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.white.withOpacity(0.9),
@@ -750,12 +761,72 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
       ),
     );
   }
-}
 
-class DayProgress {
-  final String day;
-  final int quizzes;
-  final int accuracy;
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Logout'),
+        content: Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.read<AuthBloc>().add(AuthLogout());
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text('Logout'),
+          ),
+        ],
+      ),
+    );
+  }
 
-  DayProgress(this.day, this.quizzes, this.accuracy);
+  String _formatDate(DateTime date) {
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+    final months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
+    ];
+    return '${days[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  bool _isToday(String date) {
+    try {
+      final parsedDate = DateTime.parse(date);
+      final now = DateTime.now();
+      return parsedDate.year == now.year &&
+          parsedDate.month == now.month &&
+          parsedDate.day == now.day;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  String _capitalize(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
+  }
 }

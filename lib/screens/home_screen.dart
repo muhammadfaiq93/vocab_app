@@ -9,17 +9,23 @@ import '../blocs/learning/learning_bloc.dart';
 import '../widgets/stat_card.dart';
 import 'learning_screen.dart';
 import 'quiz_screen.dart';
+import '../services/storage_service.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final storage = StorageService();
+    final fullName = storage.currentUser?.name ?? 'User';
+    final firstName = storage.currentUser?.name.split(' ').first ?? 'User';
+    final email = storage.currentUser?.email ?? '';
+    final userId = storage.userId ?? 0;
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [
-              _buildHeader(context),
+              _buildHeader(context, firstName),
               SizedBox(height: 24),
               _buildStatsSection(context),
               SizedBox(height: 32),
@@ -36,7 +42,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, firstName) {
     return Container(
       padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -75,7 +81,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                         SizedBox(width: 8),
                         Text(
-                          state.user['name'].split(' ').first,
+                          firstName,
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.white,

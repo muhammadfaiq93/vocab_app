@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../blocs/auth/auth_state.dart';
 import '../blocs/auth/auth_event.dart';
+import '../services/storage_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -14,15 +15,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final storage = StorageService();
+    final fullName = storage.currentUser?.name ?? 'User';
+    final firstName = storage.currentUser?.name.split(' ').first ?? 'User';
+    final email = storage.currentUser?.email ?? '';
+    final userId = storage.userId ?? 0;
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is! AuthAuthenticated) {
           return Center(child: CircularProgressIndicator());
         }
-
-        final user = state.user;
-        String fullName = user['name'] ?? 'Sm Jony';
-        String email = user['email'] ?? 'jony@email.com';
 
         return Scaffold(
           body: Container(

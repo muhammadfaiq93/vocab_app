@@ -1,24 +1,52 @@
 import 'package:bloc/bloc.dart';
-import '../../constants/app_strings.dart';
-import '../../models/child_user.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/api_service.dart';
+import '../../services/storage_service.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final ApiService _apiService;
+  final StorageService _storageService;
 
-  AuthBloc({ApiService? apiService})
-      : _apiService = apiService ?? ApiService(),
-        super(AuthInitialState()) {
+  AuthBloc({
+    required ApiService apiService,
+    required StorageService storageService,
+  })  : _apiService = apiService,
+        _storageService = storageService,
+        super(AuthInitial()) {
+    on<AuthCheckStatus>(_onCheckStatus);
     on<AuthLogin>(_onLogin);
     on<AuthRegister>(_onRegister);
     on<AuthLogout>(_onLogout);
-    on<CheckAuthStatusEvent>(_onCheckAuthStatus);
   }
 
-  /// Handles user login
-  Future<void> _onLogin(AuthLogin event, Emitter<AuthState> emit) async {
+  // Check if user is already logged in
+  Future<void> _onCheckStatus(
+    AuthCheckStatus event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+
+    await _storageService.initialize();
+
+    if (_storageService.isLoggedIn &&
+        _storageService.currentUser != null &&
+        _storageService.authToken != null) {
+      emit(AuthAuthenticated(
+        user: _storageService.currentUser!,
+        token: _storageService.authToken!,
+      ));
+    } else {
+      emit(AuthUnauthenticated());
+    }
+  }
+
+  // Handle login
+  Future<void> _onLogin(
+    AuthLogin event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoading());
 
     try {
@@ -28,35 +56,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
 
       if (response.success && response.data != null) {
-        final loginData = response.data!;
+        // Save to storage for persistence
+        await _storageService.saveLoginData(
+          response.data!.user,
+          response.data!.token,
+        );
 
-        // Emit authenticated state with user data and token
         emit(AuthAuthenticated(
-          user: loginData.user
-              .toMap(), // Convert to Map for backward compatibility
-          token: loginData.token,
+          user: response.data!.user,
+          token: response.data!.token,
         ));
-
-        // Log successful login for debugging
-        _logInfo('User logged in successfully: ${loginData.user.email}');
       } else {
-        // Handle login failure
-        final errorMessage = response.message ?? AppStrings.loginFailed;
-        emit(AuthError(message: errorMessage));
-
-        _logError('Login failed: $errorMessage');
+        emit(AuthError(response.message ?? 'Login failed'));
       }
     } catch (e) {
-      // Handle unexpected errors
-      const errorMessage = AppStrings.unexpectedError;
-      emit(AuthError(message: errorMessage));
-
-      _logError('Login error: $e');
+      emit(AuthError('An error occurred: ${e.toString()}'));
     }
   }
 
-  /// Handles user registration
-  Future<void> _onRegister(AuthRegister event, Emitter<AuthState> emit) async {
+  // Handle registration
+  Future<void> _onRegister(
+    AuthRegister event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoading());
 
     try {
@@ -68,96 +90,45 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
 
       if (response.success && response.data != null) {
-        final registerData = response.data!;
+        // Save to storage for persistence
+        await _storageService.saveLoginData(
+          response.data!.user,
+          response.data!.token,
+        );
 
-        // Emit authenticated state with user data and token
         emit(AuthAuthenticated(
-          user: registerData.user
-              .toMap(), // Convert to Map for backward compatibility
-          token: registerData.token,
+          user: response.data!.user,
+          token: response.data!.token,
         ));
-
-        // Log successful registration for debugging
-        _logInfo('User registered successfully: ${registerData.user.email}');
       } else {
-        // Handle registration failure
-        final errorMessage = response.message ?? AppStrings.registrationFailed;
-        emit(AuthError(message: errorMessage));
-
-        _logError('Registration failed: $errorMessage');
+        emit(AuthError(response.message ?? 'Registration failed'));
       }
     } catch (e) {
-      // Handle unexpected errors
-      const errorMessage = AppStrings.unexpectedError;
-      emit(AuthError(message: errorMessage));
-
-      _logError('Registration error: $e');
+      emit(AuthError('An error occurred: ${e.toString()}'));
     }
   }
 
-  /// Handles user logout
-  Future<void> _onLogout(AuthLogout event, Emitter<AuthState> emit) async {
+  // Handle logout
+  Future<void> _onLogout(
+    AuthLogout event,
+    Emitter<AuthState> emit,
+  ) async {
     try {
-      // Get current state to extract token if needed
-      String? token;
-      if (state is AuthAuthenticated) {
-        token = (state as AuthAuthenticated).token;
-      }
+      final token = _storageService.authToken;
 
-      // Call logout API if token exists
+      // Call API logout
       if (token != null) {
         await _apiService.logout(token);
       }
 
-      // Always emit unauthenticated state (even if API call fails)
-      emit(UnauthenticatedState());
+      // Clear storage
+      await _storageService.clearLoginData();
 
-      _logInfo('User logged out successfully');
+      emit(AuthUnauthenticated());
     } catch (e) {
-      // Even if logout fails, we should still log out locally
-      emit(UnauthenticatedState());
-
-      _logError('Logout error: $e');
+      // Even if API fails, still logout locally
+      await _storageService.clearLoginData();
+      emit(AuthUnauthenticated());
     }
-  }
-
-  /// Checks authentication status (useful for app startup)
-  Future<void> _onCheckAuthStatus(
-    CheckAuthStatusEvent event,
-    Emitter<AuthState> emit,
-  ) async {
-    try {
-      // TODO: Implement token storage and validation
-      // For now, we'll emit unauthenticated state
-      // In a real app, you would:
-      // 1. Check if token exists in secure storage
-      // 2. Validate token with API
-      // 3. Emit appropriate state
-
-      emit(UnauthenticatedState());
-
-      _logInfo('Auth status checked - no stored authentication found');
-    } catch (e) {
-      emit(UnauthenticatedState());
-
-      _logError('Auth status check error: $e');
-    }
-  }
-
-  /// Logs info messages for debugging
-  void _logInfo(String message) {
-    print('[AuthBloc] INFO: $message');
-  }
-
-  /// Logs error messages for debugging
-  void _logError(String message) {
-    print('[AuthBloc] ERROR: $message');
-  }
-
-  /// Disposes resources when bloc is closed
-  @override
-  Future<void> close() {
-    _apiService.dispose();
-    return super.close();
   }
 }
