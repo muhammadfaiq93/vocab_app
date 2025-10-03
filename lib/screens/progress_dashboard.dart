@@ -13,6 +13,7 @@ import '../widgets/quiz_selection_modal.dart';
 import '../widgets/vocabulary_selection_modal.dart';
 import 'dynamic_learning_screen.dart';
 import 'quiz_screen.dart';
+import 'profile_screen.dart';
 
 class ProgressDashboard extends StatefulWidget {
   @override
@@ -198,6 +199,14 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                     size: 50,
                     showBorder: true,
                     backgroundColor: Colors.white,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProfileScreen(),
+                        ),
+                      );
+                    },
                   ),
                   SizedBox(width: 12),
                   Text(
