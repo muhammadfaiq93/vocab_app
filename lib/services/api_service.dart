@@ -692,6 +692,203 @@ class ApiService {
     }
   }
 
+  // ==================== PROFILE METHODS ====================
+
+  /// Get user profile
+  Future<ChildUser> getProfile({required String token}) async {
+    try {
+      final response = await _client.get(
+        Uri.parse('${ApiConstants.baseUrl}/profile'),
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return ChildUser.fromJson(jsonData['data'] ?? {});
+      } else {
+        throw Exception('Failed to load profile: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching profile: $e');
+    }
+  }
+
+  /// Update user profile
+  Future<ApiResponse<ChildUser>> updateProfile({
+    required String token,
+    String? name,
+    String? email,
+    int? age,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (name != null) body['name'] = name;
+      if (email != null) body['email'] = email;
+      if (age != null) body['age'] = age;
+
+      final response = await _client
+          .put(
+            Uri.parse('${ApiConstants.baseUrl}/profile'),
+            headers: {
+              ...ApiConstants.defaultHeaders,
+              'Authorization': 'Bearer $token',
+            },
+            body: json.encode(body),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return ApiResponse(
+          success: true,
+          data: ChildUser.fromJson(jsonData['data'] ?? {}),
+          message: jsonData['message'],
+        );
+      } else {
+        final jsonData = json.decode(response.body);
+        return ApiResponse(
+          success: false,
+          message: jsonData['message'] ?? 'Update failed',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Error updating profile: $e',
+      );
+    }
+  }
+
+  /// Update avatar (image upload)
+  Future<ApiResponse<String>> updateAvatar({
+    required String token,
+    required String imagePath,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiConstants.baseUrl}/profile/avatar'),
+      );
+
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      });
+
+      request.files.add(
+        await http.MultipartFile.fromPath('avatar', imagePath),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return ApiResponse(
+          success: true,
+          data: jsonData['data']['avatar'],
+          message: jsonData['message'],
+        );
+      } else {
+        final jsonData = json.decode(response.body);
+        return ApiResponse(
+          success: false,
+          message: jsonData['message'] ?? 'Avatar update failed',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Error updating avatar: $e',
+      );
+    }
+  }
+
+  /// Change password
+  Future<ApiResponse<void>> changePassword({
+    required String token,
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('${ApiConstants.baseUrl}/profile/change-password'),
+            headers: {
+              ...ApiConstants.defaultHeaders,
+              'Authorization': 'Bearer $token',
+            },
+            body: json.encode({
+              'current_password': currentPassword,
+              'new_password': newPassword,
+              'new_password_confirmation': confirmPassword,
+            }),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return ApiResponse(
+          success: true,
+          message: jsonData['message'],
+        );
+      } else {
+        final jsonData = json.decode(response.body);
+        return ApiResponse(
+          success: false,
+          message: jsonData['message'] ?? 'Password change failed',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Error changing password: $e',
+      );
+    }
+  }
+
+  /// Delete account
+  Future<ApiResponse<void>> deleteAccount({
+    required String token,
+    required String password,
+  }) async {
+    try {
+      final response = await _client
+          .delete(
+            Uri.parse('${ApiConstants.baseUrl}/profile'),
+            headers: {
+              ...ApiConstants.defaultHeaders,
+              'Authorization': 'Bearer $token',
+            },
+            body: json.encode({'password': password}),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return ApiResponse(
+          success: true,
+          message: jsonData['message'],
+        );
+      } else {
+        final jsonData = json.decode(response.body);
+        return ApiResponse(
+          success: false,
+          message: jsonData['message'] ?? 'Account deletion failed',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Error deleting account: $e',
+      );
+    }
+  }
+
   // ==================== CLEANUP ====================
 
   // Dispose method for cleanup
