@@ -7,7 +7,8 @@ import '../blocs/auth/auth_event.dart';
 import '../blocs/auth/auth_state.dart';
 import '../widgets/custom_text_field.dart';
 import '../utils/validators.dart';
-import '../utils/app_routes.dart'; // Add this import at the top
+import '../utils/app_routes.dart';
+import 'progress_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -35,15 +36,19 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AuthAuthenticated) {
-          print('Login successful');
-          Navigator.pushReplacementNamed(
-              context, AppRoutes.progressDashboard); // ← CORRECT
-        } else if (state is AuthError) {
+        if (state is AuthError) {
+          // Show error message
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+            ),
           );
         }
+        // } else if (state is AuthAuthenticated) {
+        //   // Navigate to home screen on successful login/registration
+        //   Navigator.pushReplacementNamed(context, AppRoutes.progressDashboard);
+        // }
       },
       child: Scaffold(
         body: Container(

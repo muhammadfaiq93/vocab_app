@@ -1,7 +1,79 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/settings_provider.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  bool _settingsLoaded = false;
+  bool _showStartButton = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      final settingsProvider =
+          Provider.of<SettingsProvider>(context, listen: false);
+
+      // Load settings
+      await settingsProvider.initialize();
+
+      if (!mounted) return;
+
+      print('✅ Settings loaded successfully');
+      print('Maintenance Mode: ${settingsProvider.isMaintenanceMode}');
+
+      // Check maintenance mode
+      if (settingsProvider.isMaintenanceMode) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MaintenanceScreen()),
+        );
+        return;
+      }
+
+      // Check if update is required
+      const currentVersion = '1.0.0';
+      const platform = 'android';
+
+      final needsUpdate =
+          await settingsProvider.needsUpdate(currentVersion, platform);
+
+      if (needsUpdate && settingsProvider.forceUpdate) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const UpdateRequiredScreen()),
+        );
+        return;
+      }
+
+      // Settings loaded successfully
+      setState(() {
+        _settingsLoaded = true;
+      });
+
+      // Show start button for 1 second, then let AuthChecker take over
+      await Future.delayed(Duration(milliseconds: 500));
+      if (mounted) {
+        setState(() {
+          _showStartButton = true;
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading settings: $e');
+      setState(() {
+        _settingsLoaded = true;
+        _showStartButton = true;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,41 +100,28 @@ class SplashScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      // Child character image from assets - increased size
                       Container(
                         width: 320,
                         height: 320,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          clipBehavior: Clip.none,
-                          children: [
-                            // Main character image
-                            Container(
-                              width: 320,
-                              height: 320,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(15),
-                                child: Image.asset(
-                                  'assets/images/child_character.png', // Replace with your image filename
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    // Fallback if image not found
-                                    return Container(
-                                      decoration: BoxDecoration(
-                                        color: Color(0xFFE3F2FD),
-                                        borderRadius: BorderRadius.circular(15),
-                                      ),
-                                      child: Icon(
-                                        Icons.image,
-                                        size: 80,
-                                        color: Color(0xFF6366F1),
-                                      ),
-                                    );
-                                  },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(15),
+                          child: Image.asset(
+                            'assets/images/child_character.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: Color(0xFFE3F2FD),
+                                  borderRadius: BorderRadius.circular(15),
                                 ),
-                              ),
-                            ),
-                          ],
+                                child: Icon(
+                                  Icons.image,
+                                  size: 80,
+                                  color: Color(0xFF6366F1),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ],
@@ -70,7 +129,7 @@ class SplashScreen extends StatelessWidget {
                 ),
               ),
 
-              // Bottom blue section
+              // Bottom section
               Expanded(
                 flex: 2,
                 child: Container(
@@ -164,36 +223,34 @@ class SplashScreen extends StatelessWidget {
 
                         Spacer(),
 
-                        // Start Learning button
-                        Container(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => LoginScreen(),
+                        // Loading indicator or info text
+                        if (!_settingsLoaded)
+                          Column(
+                            children: [
+                              CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
                                 ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Color(0xFF6366F1),
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
                               ),
-                              elevation: 0,
-                            ),
-                            child: Text(
-                              'Start Learning',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                              SizedBox(height: 16),
+                              Text(
+                                'Loading...',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontSize: 14,
+                                ),
                               ),
+                            ],
+                          )
+                        else if (_showStartButton)
+                          Text(
+                            'Settings loaded',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
                             ),
                           ),
-                        ),
+
                         SizedBox(height: 12),
 
                         // Page indicator
@@ -211,6 +268,170 @@ class SplashScreen extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class MaintenanceScreen extends StatelessWidget {
+  const MaintenanceScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final settingsProvider = Provider.of<SettingsProvider>(context);
+
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFF8F9FA),
+              Color(0xFFE8F0FE),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.construction,
+                    size: 100,
+                    color: Color(0xFF6366F1),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Under Maintenance',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6366F1),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    settingsProvider.settings?.appInfo.maintenanceMessage ??
+                        'The app is currently under maintenance. Please try again later.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton(
+                    onPressed: () {
+                      settingsProvider.refreshSettings();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF6366F1),
+                      foregroundColor: Colors.white,
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                    child: const Text(
+                      'Try Again',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class UpdateRequiredScreen extends StatelessWidget {
+  const UpdateRequiredScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFF8F9FA),
+              Color(0xFFE8F0FE),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.system_update,
+                    size: 100,
+                    color: Color(0xFF6366F1),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Update Required',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6366F1),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'A new version of the app is available. Please update to continue.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      // TODO: Open app store
+                    },
+                    icon: const Icon(Icons.download),
+                    label: const Text(
+                      'Update Now',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF6366F1),
+                      foregroundColor: Colors.white,
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
