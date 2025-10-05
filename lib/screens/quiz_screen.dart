@@ -5,6 +5,7 @@ import '../blocs/auth/auth_bloc.dart';
 import '../blocs/auth/auth_state.dart';
 import '../models/vocabulary_card.dart';
 import '../models/quiz_result.dart';
+import 'quiz_result_screen.dart';
 import '../services/api_service.dart';
 
 class QuizScreen extends StatefulWidget {
@@ -24,7 +25,6 @@ class QuizScreen extends StatefulWidget {
 }
 
 class _QuizScreenState extends State<QuizScreen> {
-  // final VocabularyApiService _apiService = VocabularyApiService();
   final ApiService _apiService = ApiService();
 
   List<VocabularyCard> _vocabularyList = [];
@@ -33,7 +33,13 @@ class _QuizScreenState extends State<QuizScreen> {
   bool isLoading = true;
   String? _selectedAnswer;
   bool _showResult = false;
+
+  // For API submission
   List<QuizResult> _quizResults = [];
+
+  // For display in results screen
+  List<QuizAttendResult> _quizAttendResults = [];
+
   String? errorMessage;
 
   Timer? _questionTimer;
@@ -55,7 +61,7 @@ class _QuizScreenState extends State<QuizScreen> {
   Future<void> _loadVocabulary() async {
     try {
       final words = await _apiService.getVocabularyByDifficulty(
-        difficulty: widget.difficulty, // Pass from modal
+        difficulty: widget.difficulty,
         count: widget.limit,
       );
 
@@ -92,25 +98,24 @@ class _QuizScreenState extends State<QuizScreen> {
     _questionTimer?.cancel();
 
     final currentWord = _vocabularyList[_currentQuestionIndex];
-    // final correctAnswers = widget.testType == 'synonyms'
-    //     ? currentWord.synonyms
-    //     : currentWord.antonyms;
-
-    // final isCorrect = correctAnswers.contains(_selectedAnswer);
 
     bool isCorrect;
+    String correctAnswerText;
+
     if (widget.testType == 'meaning') {
-      // For meaning test, the correct answer is the definition
-      isCorrect = _selectedAnswer == currentWord.definition;
+      correctAnswerText = currentWord.definition;
+      isCorrect = _selectedAnswer == correctAnswerText;
     } else {
-      // For synonyms/antonyms, check if answer is in the list
       final correctAnswers = widget.testType == 'synonyms'
           ? currentWord.synonyms
           : currentWord.antonyms;
       isCorrect = correctAnswers.contains(_selectedAnswer);
+      // Get first correct answer for display
+      correctAnswerText =
+          correctAnswers.isNotEmpty ? correctAnswers.first : _selectedAnswer!;
     }
 
-    // Save quiz result
+    // Save quiz result for API
     final quizResult = QuizResult(
       wordId: currentWord.id,
       testType: widget.testType,
@@ -118,8 +123,15 @@ class _QuizScreenState extends State<QuizScreen> {
       isCorrect: isCorrect,
       timeSpent: _timeSpent,
     );
-
     _quizResults.add(quizResult);
+
+    // Save quiz attend result for display
+    final quizAttendResult = QuizAttendResult(
+      word: currentWord.word,
+      selectedAnswer: _selectedAnswer!,
+      correctAnswer: correctAnswerText,
+    );
+    _quizAttendResults.add(quizAttendResult);
 
     if (isCorrect) {
       setState(() {
@@ -171,14 +183,14 @@ class _QuizScreenState extends State<QuizScreen> {
       print('Error saving results: $e');
     }
 
-    // Show results screen
-    Navigator.pushReplacement(
+    // Navigate to results screen with display data
+    Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => QuizResultScreen(
           score: _score,
           total: _vocabularyList.length,
-          results: _quizResults,
+          results: _quizAttendResults, // Pass the display data
         ),
       ),
     );
@@ -223,14 +235,12 @@ class _QuizScreenState extends State<QuizScreen> {
     }
 
     final currentWord = _vocabularyList[_currentQuestionIndex];
-    // Get choices based on test type
     final choices = widget.testType == 'synonyms'
         ? (currentWord.synonymChoices ?? [])
         : widget.testType == 'antonyms'
             ? (currentWord.antonymChoices ?? [])
             : (currentWord.meaningChoices ?? []);
 
-    // Get correct answer(s) based on test type
     final correctAnswer =
         widget.testType == 'meaning' ? currentWord.definition : null;
     final correctAnswers = widget.testType == 'synonyms'
@@ -239,7 +249,6 @@ class _QuizScreenState extends State<QuizScreen> {
             ? currentWord.antonyms
             : [];
 
-    // Check if choices are empty
     if (choices.isEmpty) {
       return Scaffold(
         appBar: AppBar(
@@ -297,21 +306,18 @@ class _QuizScreenState extends State<QuizScreen> {
       ),
       body: Column(
         children: [
-          // Progress bar
           LinearProgressIndicator(
             value: (_currentQuestionIndex + 1) / _vocabularyList.length,
             backgroundColor: Colors.grey[200],
             valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
             minHeight: 8,
           ),
-
           Expanded(
             child: SingleChildScrollView(
               padding: EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Score and Timer Card
                   Container(
                     padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -362,8 +368,6 @@ class _QuizScreenState extends State<QuizScreen> {
                     ),
                   ),
                   SizedBox(height: 24),
-
-                  // Question Card
                   Container(
                     padding: EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -459,12 +463,9 @@ class _QuizScreenState extends State<QuizScreen> {
                     ),
                   ),
                   SizedBox(height: 24),
-
-                  // Answer Choices
                   ...choices.map((choice) {
                     final isSelected = _selectedAnswer == choice;
 
-                    // Determine if this choice is correct
                     bool isCorrect;
                     if (widget.testType == 'meaning') {
                       isCorrect = choice == correctAnswer;
@@ -553,10 +554,7 @@ class _QuizScreenState extends State<QuizScreen> {
                       ),
                     );
                   }).toList(),
-
                   SizedBox(height: 24),
-
-                  // Submit Button
                   if (!_showResult)
                     ElevatedButton(
                       onPressed: _selectedAnswer == null ? null : _submitAnswer,
@@ -582,121 +580,6 @@ class _QuizScreenState extends State<QuizScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// Quiz Result Screen
-class QuizResultScreen extends StatelessWidget {
-  final int score;
-  final int total;
-  final List<QuizResult> results;
-
-  const QuizResultScreen({
-    Key? key,
-    required this.score,
-    required this.total,
-    required this.results,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final percentage = (score / total * 100).round();
-
-    return Scaffold(
-      backgroundColor: Color(0xFFF9FAFB),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0xFF3B82F6).withOpacity(0.3),
-                      blurRadius: 30,
-                      offset: Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  percentage >= 70
-                      ? '🎉'
-                      : percentage >= 50
-                          ? '👍'
-                          : '💪',
-                  style: TextStyle(fontSize: 80),
-                ),
-              ),
-              SizedBox(height: 32),
-              Text(
-                percentage >= 70
-                    ? 'Excellent!'
-                    : percentage >= 50
-                        ? 'Good Job!'
-                        : 'Keep Practicing!',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'You scored',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                '$score / $total',
-                style: TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF3B82F6),
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                '$percentage%',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-              SizedBox(height: 48),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF3B82F6),
-                  padding: EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Text(
-                  'Back to Home',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

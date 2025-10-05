@@ -1,4 +1,4 @@
-package com.example.children_vocabulary_app
+package co.uk.vocab.app
 
 import io.flutter.embedding.android.FlutterActivity
 

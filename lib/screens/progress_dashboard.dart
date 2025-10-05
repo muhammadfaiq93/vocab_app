@@ -1001,15 +1001,6 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
           labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           onTap: () => _showLearningModal(context),
         ),
-        SpeedDialChild(
-          child: Icon(Icons.school_outlined, color: Colors.white),
-          backgroundColor: Color(0xFF10B981),
-          label: 'Practice',
-          labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          onTap: () {
-            // Navigate to practice screen
-          },
-        ),
       ],
     );
   }
