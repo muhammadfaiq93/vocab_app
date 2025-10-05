@@ -7,6 +7,7 @@ import '../models/vocabulary_card.dart';
 import '../models/exam_question.dart';
 import '../models/exam_result.dart';
 import '../models/quiz_result.dart';
+import '../models/quiz_session.dart';
 import '../models/dashboard_data.dart';
 import 'storage_service.dart';
 
@@ -593,6 +594,7 @@ class ApiService {
     try {
       String token = StorageService().authToken!;
       final uri = Uri.parse('${ApiConstants.baseUrl}/quiz-results');
+      print('Posting to $uri with body: ${jsonEncode(quizResult.toJson())}');
       final response = await _client
           .post(
             uri,
@@ -886,6 +888,141 @@ class ApiService {
         success: false,
         message: 'Error deleting account: $e',
       );
+    }
+  }
+
+  /// Start a new quiz session
+  Future<int> startQuizSession({
+    required String testType,
+    required int difficulty,
+    required int totalQuestions,
+  }) async {
+    try {
+      String token = StorageService().authToken!;
+
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/start'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'test_type': testType,
+          'difficulty': difficulty,
+          'total_questions': totalQuestions,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        //print('Started quiz session: ${data['data']}');
+        return data['data']['session_id'];
+      } else {
+        throw Exception('Failed to start quiz session');
+      }
+    } catch (e) {
+      print('Error starting quiz session: $e');
+      rethrow;
+    }
+  }
+
+  /// Finish quiz session with results
+  Future<void> finishQuizSession({
+    required int sessionId,
+    required int correctCount,
+    required int incorrectCount,
+    required int totalTimeSeconds,
+  }) async {
+    try {
+      String token = StorageService().authToken!;
+
+      final response = await http.put(
+        Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/$sessionId/finish'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'correct_count': correctCount,
+          'incorrect_count': incorrectCount,
+          'total_time_seconds': totalTimeSeconds,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to finish quiz session');
+      }
+    } catch (e) {
+      print('Error finishing quiz session: $e');
+      rethrow;
+    }
+  }
+
+  /// Abandon quiz session
+  Future<void> abandonQuizSession(int sessionId) async {
+    try {
+      String token = StorageService().authToken!;
+
+      await http.put(
+        Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/$sessionId/abandon'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+    } catch (e) {
+      print('Error abandoning quiz session: $e');
+      // Don't throw - this is best effort
+    }
+  }
+
+  /// Get quiz statistics for dashboard
+  Future<QuizStats> getQuizStats() async {
+    try {
+      String token = StorageService().authToken!;
+
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/stats'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return QuizStats.fromJson(data['data']);
+      } else {
+        throw Exception('Failed to get quiz stats');
+      }
+    } catch (e) {
+      print('Error getting quiz stats: $e');
+      rethrow;
+    }
+  }
+
+  /// Get quiz history
+  Future<List<QuizSession>> getQuizHistory({int page = 1}) async {
+    try {
+      String token = StorageService().authToken!;
+
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/history?page=$page'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final sessions = (data['data']['data'] as List)
+            .map((session) => QuizSession.fromJson(session))
+            .toList();
+        return sessions;
+      } else {
+        throw Exception('Failed to get quiz history');
+      }
+    } catch (e) {
+      print('Error getting quiz history: $e');
+      rethrow;
     }
   }
 

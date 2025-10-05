@@ -45,16 +45,25 @@ class _QuizScreenState extends State<QuizScreen> {
   Timer? _questionTimer;
   int _timeSpent = 0;
   DateTime? _questionStartTime;
+  DateTime? _quizStartTime;
+
+  // NEW: Quiz session tracking
+  int? _currentSessionId;
 
   @override
   void initState() {
     super.initState();
+    _quizStartTime = DateTime.now();
     _loadVocabulary();
   }
 
   @override
   void dispose() {
     _questionTimer?.cancel();
+    // If quiz wasn't completed, mark as abandoned
+    if (_currentSessionId != null) {
+      _apiService.abandonQuizSession(_currentSessionId!);
+    }
     super.dispose();
   }
 
@@ -64,9 +73,17 @@ class _QuizScreenState extends State<QuizScreen> {
         difficulty: widget.difficulty,
         count: widget.limit,
       );
+      // Start quiz session
+      final sessionId = await _apiService.startQuizSession(
+        testType: widget.testType,
+        difficulty: widget.difficulty,
+        totalQuestions: widget.limit,
+      );
+      print('Started quiz session with ID: $sessionId');
 
       setState(() {
         _vocabularyList = words;
+        _currentSessionId = sessionId;
         isLoading = false;
       });
 
@@ -117,6 +134,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
     // Save quiz result for API
     final quizResult = QuizResult(
+      quizSessionId: _currentSessionId,
       wordId: currentWord.id,
       testType: widget.testType,
       userAnswer: _selectedAnswer!,
@@ -178,6 +196,22 @@ class _QuizScreenState extends State<QuizScreen> {
 
     // Save all results to API
     try {
+      // Calculate total time
+      final totalTime = DateTime.now().difference(_quizStartTime!).inSeconds;
+      final incorrectCount = _vocabularyList.length - _score;
+
+      // Finish quiz session
+      if (_currentSessionId != null) {
+        await _apiService.finishQuizSession(
+          sessionId: _currentSessionId!,
+          correctCount: _score,
+          incorrectCount: incorrectCount,
+          totalTimeSeconds: totalTime,
+        );
+
+        // Clear session ID so dispose doesn't abandon it
+        _currentSessionId = null;
+      }
       await _apiService.saveQuizResults(_quizResults);
     } catch (e) {
       print('Error saving results: $e');

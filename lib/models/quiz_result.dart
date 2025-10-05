@@ -1,5 +1,6 @@
 class QuizResult {
   final int? id;
+  final int? quizSessionId;
   final int wordId;
   final String testType;
   final String userAnswer;
@@ -9,6 +10,7 @@ class QuizResult {
 
   QuizResult({
     this.id,
+    required this.quizSessionId,
     required this.wordId,
     required this.testType,
     required this.userAnswer,
@@ -20,6 +22,7 @@ class QuizResult {
   factory QuizResult.fromJson(Map<String, dynamic> json) {
     return QuizResult(
       id: json['id'],
+      quizSessionId: json['quiz_session_id'],
       wordId: json['word_id'],
       testType: json['test_type'],
       userAnswer: json['user_answer'],
@@ -33,6 +36,7 @@ class QuizResult {
 
   Map<String, dynamic> toJson() {
     return {
+      'quiz_session_id': quizSessionId,
       'word_id': wordId,
       'test_type': testType,
       'user_answer': userAnswer,
