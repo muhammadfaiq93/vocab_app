@@ -18,31 +18,17 @@ class CalendarHeatmapData {
   });
 
   factory CalendarHeatmapData.fromJson(Map<String, dynamic> json) {
-    try {
-      var calendarList = json['calendar'];
-      List<CalendarDay> parsedCalendar = [];
-
-      if (calendarList is List) {
-        parsedCalendar = calendarList
-            .map((item) => CalendarDay.fromJson(item as Map<String, dynamic>))
-            .toList();
-      }
-
-      return CalendarHeatmapData(
-        year: json['year'] ?? DateTime.now().year,
-        month: json['month'] ?? DateTime.now().month,
-        monthName: json['month_name'] ?? '',
-        daysInMonth: json['days_in_month'] ?? 30,
-        firstDayOfWeek: json['first_day_of_week'] ?? 1,
-        calendar: parsedCalendar,
-        stats:
-            CalendarStats.fromJson(json['stats'] is Map ? json['stats'] : {}),
-      );
-    } catch (e) {
-      print('Error parsing CalendarHeatmapData: $e');
-      print('JSON: $json');
-      rethrow;
-    }
+    return CalendarHeatmapData(
+      year: json['year'] as int,
+      month: json['month'] as int,
+      monthName: json['month_name'] as String,
+      daysInMonth: json['days_in_month'] as int,
+      firstDayOfWeek: json['first_day_of_week'] as int,
+      calendar: (json['calendar'] as List)
+          .map((item) => CalendarDay.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      stats: CalendarStats.fromJson(json['stats'] as Map<String, dynamic>),
+    );
   }
 }
 
@@ -65,14 +51,12 @@ class CalendarDay {
 
   factory CalendarDay.fromJson(Map<String, dynamic> json) {
     return CalendarDay(
-      date: json['date']?.toString() ?? '',
-      day: json['day'] is int
-          ? json['day']
-          : int.tryParse(json['day']?.toString() ?? '0') ?? 0,
-      dayOfWeek: json['day_of_week'] is int ? json['day_of_week'] : 1,
-      quizCount: json['quiz_count'] is int ? json['quiz_count'] : 0,
-      intensity: json['intensity'] is int ? json['intensity'] : 0,
-      accuracy: (json['accuracy'] ?? 0).toDouble(),
+      date: json['date'] as String,
+      day: json['day'] as int,
+      dayOfWeek: json['day_of_week'] as int,
+      quizCount: json['quiz_count'] as int,
+      intensity: json['intensity'] as int,
+      accuracy: (json['accuracy'] as num).toDouble(),
     );
   }
 }
@@ -90,11 +74,10 @@ class CalendarStats {
 
   factory CalendarStats.fromJson(Map<String, dynamic> json) {
     return CalendarStats(
-      totalQuizzes: json['total_quizzes'] is int ? json['total_quizzes'] : 0,
-      totalDaysActive:
-          json['total_days_active'] is int ? json['total_days_active'] : 0,
+      totalQuizzes: json['total_quizzes'] as int,
+      totalDaysActive: json['total_days_active'] as int,
       avgQuizzesPerActiveDay:
-          (json['avg_quizzes_per_active_day'] ?? 0).toDouble(),
+          (json['avg_quizzes_per_active_day'] as num).toDouble(),
     );
   }
 }

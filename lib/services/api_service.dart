@@ -1027,33 +1027,70 @@ class ApiService {
     }
   }
 
-  Future<CalendarHeatmapData> getCalendarHeatmap({
+  Future<CalendarHeatmapData> fetchCalendarHeatmapData({
     required int year,
     required int month,
   }) async {
-    String token = StorageService().authToken!;
-    final uri = Uri.parse('${ApiConstants.baseUrl}/calendar-heatmap').replace(
-      queryParameters: {
-        'year': year,
-        'month': month,
-      },
-    );
-    print('Fetching calendar heatmap from $uri');
-    final response = await _client.get(
-      uri,
-      headers: {
-        ...ApiConstants.defaultHeaders,
-        'Authorization': 'Bearer $token',
-      },
-    ).timeout(ApiConstants.connectTimeout);
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      print('Calendar heatmap data: $data');
-      return CalendarHeatmapData.fromJson(data['data'] ?? {});
-    } else {
-      throw Exception('Failed to load calendar heatmap');
+    try {
+      String token = StorageService().authToken!;
+      final uri =
+          Uri.parse('${ApiConstants.baseUrl}/dashboard/calendar-heatmap')
+              .replace(
+        queryParameters: {
+          'month': month.toString(),
+          'year': year.toString(),
+        },
+      );
+
+      final response = await _client.get(
+        uri,
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return CalendarHeatmapData.fromJson(data['data'] ?? {});
+        // print('Calendar heatmap data: $data');
+        //return CalendarHeatmapData.fromJson(data['data'] ?? {});
+      } else {
+        throw Exception('Failed to load vocabulary: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching vocabulary: $e');
     }
   }
+
+  // Future<CalendarHeatmapData> getCalendarHeatmap({
+  //   required int year,
+  //   required int month,
+  // }) async {
+  //   String token = StorageService().authToken!;
+  //   final uri =
+  //       Uri.parse('${ApiConstants.baseUrl}/dashboard/calendar-heatmap').replace(
+  //     queryParameters: {
+  //       'year': year,
+  //       'month': month,
+  //     },
+  //   );
+  //   print('Fetching calendar heatmap from $uri');
+  //   final response = await _client.get(
+  //     uri,
+  //     headers: {
+  //       ...ApiConstants.defaultHeaders,
+  //       'Authorization': 'Bearer $token',
+  //     },
+  //   ).timeout(ApiConstants.connectTimeout);
+  //   print('Calendar API Response: ${response.body}');
+  //   if (response.statusCode == 200) {
+  //     final data = json.decode(response.body);
+  //     print('Calendar heatmap data: $data');
+  //     return CalendarHeatmapData.fromJson(data['data'] ?? {});
+  //   } else {
+  //     throw Exception('Failed to load calendar heatmap');
+  //   }
+  // }
 
   // ==================== CLEANUP ====================
 

@@ -51,11 +51,12 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
     try {
       final token = StorageService().authToken;
       if (token == null) return;
-
-      final data = await _apiService.getCalendarHeatmap(
-        year: _selectedMonth.year,
-        month: _selectedMonth.month,
+      // final data = [];
+      final data = await _apiService.fetchCalendarHeatmapData(
+        year: _selectedMonth.year.toInt(),
+        month: _selectedMonth.month.toInt(),
       );
+      // print('Loaded calendar data: $data');
 
       setState(() {
         _calendarData = data;
