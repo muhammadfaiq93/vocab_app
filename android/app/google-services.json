@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "105356447305",
+    "project_id": "vocab-11plus",
+    "storage_bucket": "vocab-11plus.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:105356447305:android:e089d6cbc53f0adabfb998",
+        "android_client_info": {
+          "package_name": "co.uk.vocab.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBBVl3-OLmm8pJBHnOkXc3J8C1ndI0doxI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

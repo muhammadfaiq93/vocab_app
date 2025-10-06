@@ -53,6 +53,19 @@ dependencies:
   flutter_speed_dial: ^7.0.0
   image_picker: ^1.1.2
   flutter_launcher_icons: ^0.14.4
+# Firebase Core (Required)
+  firebase_core: ^2.24.2
+  
+  # Firebase Cloud Messaging (Push Notifications)
+  firebase_messaging: ^14.7.10
+  
+  # Firebase Analytics (Optional)
+  firebase_analytics: ^10.10.7
+  
+  # Local Notifications
+  # flutter_local_notifications: ^16.3.0
+  flutter_local_notifications: ^17.2.3
+  firebase_crashlytics: ^3.5.7
 
 dev_dependencies:
   flutter_test:

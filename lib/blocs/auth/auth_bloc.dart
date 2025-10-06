@@ -50,10 +50,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
 
     try {
-      final response = await _apiService.login(
-        email: event.email,
-        password: event.password,
-      );
+      final response =
+          await _apiService.login(email: event.email, password: event.password);
 
       if (response.success && response.data != null) {
         // Save to storage for persistence

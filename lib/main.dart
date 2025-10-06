@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
+import 'dart:ui';
 import 'services/api_service.dart';
 import 'services/storage_service.dart';
 import 'blocs/auth/auth_bloc.dart';
@@ -11,9 +12,24 @@ import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/progress_dashboard.dart';
 import 'utils/app_routes.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'services/firebase_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    // Initialize Firebase Core FIRST
+    await Firebase.initializeApp();
+
+    // Then initialize Firebase Service
+    await FirebaseService().initialize();
+    final FCMToken = FirebaseService().fcmToken;
+  } catch (e) {
+    print('❌ Firebase initialization failed: $e');
+  }
+  // WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize storage
   await StorageService().initialize();

@@ -11,6 +11,7 @@ import '../models/quiz_session.dart';
 import '../models/dashboard_data.dart';
 import '../models/calendar_heatmap.dart';
 import 'storage_service.dart';
+import 'firebase_service.dart';
 
 class ApiResponse<T> {
   final bool success;
@@ -57,6 +58,9 @@ class ApiService {
     required String password,
   }) async {
     try {
+      final deviceType = Platform.isIOS ? 'ios' : 'android';
+      await FirebaseService().initialize();
+      final FCMToken = FirebaseService().fcmToken;
       final response = await _client
           .post(
             Uri.parse(ApiConstants.loginEndpoint),
@@ -64,6 +68,8 @@ class ApiService {
             body: json.encode({
               'email': email,
               'password': password,
+              'device_type': deviceType,
+              'fcm_token': FCMToken,
             }),
           )
           .timeout(ApiConstants.connectTimeout);
@@ -1028,8 +1034,8 @@ class ApiService {
   }
 
   Future<CalendarHeatmapData> fetchCalendarHeatmapData({
-    required int year,
-    required int month,
+    year,
+    month,
   }) async {
     try {
       String token = StorageService().authToken!;
@@ -1092,6 +1098,44 @@ class ApiService {
   //   }
   // }
 
+  Future<ApiResponse<void>> saveFCMToken({required String token}) async {
+    try {
+      final deviceType = Platform.isIOS ? 'ios' : 'android';
+      final response = await _client
+          .post(
+            Uri.parse('${ApiConstants.baseUrl}/fcm-token'),
+            headers: {
+              ...ApiConstants.defaultHeaders,
+              'Authorization': 'Bearer $token',
+            },
+            body: json.encode({
+              'token': token,
+              'device_type': deviceType,
+            }),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return ApiResponse(
+          success: true,
+          message: jsonData['message'],
+        );
+      } else {
+        final jsonData = json.decode(response.body);
+        return ApiResponse(
+          success: false,
+          message: jsonData['message'] ?? 'Password change failed',
+        );
+      }
+    } catch (e) {
+      print('Error saving FCM token: $e');
+      return ApiResponse(
+        success: false,
+        message: 'Error saving FCM token: $e',
+      );
+    }
+  }
   // ==================== CLEANUP ====================
 
   // Dispose method for cleanup
