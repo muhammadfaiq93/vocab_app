@@ -14,6 +14,7 @@ import '../widgets/vocabulary_selection_modal.dart';
 import 'dynamic_learning_screen.dart';
 import 'quiz_screen.dart';
 import 'profile_screen.dart';
+import '../models/calendar_heatmap.dart';
 
 class ProgressDashboard extends StatefulWidget {
   @override
@@ -25,11 +26,43 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
   bool _isLoading = true;
   DashboardData? _dashboardData;
   String? _errorMessage;
+  CalendarHeatmapData? _calendarData;
+  DateTime _selectedMonth = DateTime.now();
 
   @override
   void initState() {
     super.initState();
     _loadDashboardData();
+    _loadCalendarHeatmap();
+  }
+
+  void _changeMonth(int offset) {
+    setState(() {
+      _selectedMonth = DateTime(
+        _selectedMonth.year,
+        _selectedMonth.month + offset,
+        1,
+      );
+    });
+    _loadCalendarHeatmap();
+  }
+
+  Future<void> _loadCalendarHeatmap() async {
+    try {
+      final token = StorageService().authToken;
+      if (token == null) return;
+
+      final data = await _apiService.getCalendarHeatmap(
+        year: _selectedMonth.year,
+        month: _selectedMonth.month,
+      );
+
+      setState(() {
+        _calendarData = data;
+      });
+    } catch (e) {
+      print('Error loading calendar: $e');
+    }
   }
 
   Future<void> _loadDashboardData() async {
@@ -384,8 +417,9 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
     final weeklyData = _dashboardData!.weeklyProgress;
     if (weeklyData.isEmpty) return SizedBox();
 
-    final maxQuizzes = weeklyData.map((e) => e.quizzes).reduce(math.max);
-    final totalQuizzes = weeklyData.fold(0, (sum, item) => sum + item.quizzes);
+    final maxQuizzes = weeklyData.map((e) => e.quizCount).reduce(math.max);
+    final totalQuizzes =
+        weeklyData.fold(0, (sum, item) => sum + item.quizCount);
 
     return Container(
       padding: EdgeInsets.all(20),
@@ -440,8 +474,6 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: weeklyData.map((day) {
-                final heightPercent =
-                    maxQuizzes > 0 ? (day.quizzes / maxQuizzes) : 0.0;
                 final isToday = _isToday(day.date);
 
                 return Expanded(
@@ -450,14 +482,15 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Text(
-                          '${day.quizzes}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF6B7280),
+                        if (day.quizCount > 0)
+                          Text(
+                            '${day.quizCount}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF6B7280),
+                            ),
                           ),
-                        ),
                         SizedBox(height: 8),
                         Expanded(
                           child: Container(
@@ -467,23 +500,38 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             alignment: Alignment.bottomCenter,
-                            child: FractionallySizedBox(
-                              heightFactor: heightPercent,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: isToday
-                                        ? [Color(0xFF6366F1), Color(0xFF8B5CF6)]
-                                        : [
-                                            Color(0xFF8B5CF6),
-                                            Color(0xFF6366F1)
-                                          ],
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                double barHeight = 0;
+                                if (day.quizCount > 0 && maxQuizzes > 0) {
+                                  final heightPercent =
+                                      day.quizCount / maxQuizzes;
+                                  barHeight = math.max(
+                                    constraints.maxHeight * heightPercent,
+                                    8.0, // Minimum 8px visibility
+                                  );
+                                }
+
+                                return Container(
+                                  height: barHeight,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: isToday
+                                          ? [
+                                              Color(0xFF6366F1),
+                                              Color(0xFF8B5CF6)
+                                            ]
+                                          : [
+                                              Color(0xFF8B5CF6),
+                                              Color(0xFF6366F1)
+                                            ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
+                                );
+                              },
                             ),
                           ),
                         ),
@@ -552,8 +600,8 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
               padding: EdgeInsets.only(bottom: 16),
               child: _buildPerformanceBar(
                 _capitalize(item.testType),
-                item.correct,
-                item.total,
+                item.totalCorrect,
+                item.totalQuestions,
                 color,
               ),
             );
@@ -638,64 +686,234 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
   }
 
   Widget _buildCalendarHeatmap() {
-    final heatmapData = _dashboardData!.activityHeatmap;
+    if (_calendarData == null) {
+      return Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Activity Heatmap',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1F2937),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Activity Calendar',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
+              ),
             ),
-          ),
-          SizedBox(height: 16),
-          Text(
-            'This Month',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B7280),
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () => _changeMonth(-1),
+                  icon: Icon(Icons.chevron_left, color: Color(0xFF6B7280)),
+                ),
+                IconButton(
+                  onPressed: () => _changeMonth(1),
+                  icon: Icon(Icons.chevron_right, color: Color(0xFF6B7280)),
+                ),
+              ],
             ),
-          ),
-          SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text('Less',
-                  style: TextStyle(fontSize: 10, color: Color(0xFF6B7280))),
-              SizedBox(width: 8),
-              ...List.generate(5, (index) {
-                return Padding(
-                  padding: EdgeInsets.only(left: 4),
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Color(0xFF6366F1).withOpacity(0.2 + (index * 0.2)),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                );
-              }),
-              SizedBox(width: 8),
-              Text('More',
-                  style: TextStyle(fontSize: 10, color: Color(0xFF6B7280))),
+          ],
+        ),
+        SizedBox(height: 16),
+        Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 20,
+                offset: Offset(0, 8),
+              ),
             ],
+          ),
+          child: Column(
+            children: [
+              Text(
+                '${_calendarData!.monthName} ${_calendarData!.year}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '${_calendarData!.stats.totalQuizzes} quizzes • ${_calendarData!.stats.totalDaysActive} active days',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+              SizedBox(height: 16),
+              _buildCalendarGrid(),
+              SizedBox(height: 16),
+              _buildIntensityLegend(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCalendarGrid() {
+    final weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final now = DateTime.now();
+
+    // Create a map for quick day lookup
+    final daysMap = {for (var day in _calendarData!.calendar) day.day: day};
+
+    return Column(
+      children: [
+        // Week headers
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: weekDays
+              .map((day) => Container(
+                    width: 36,
+                    child: Text(
+                      day,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF6B7280),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ))
+              .toList(),
+        ),
+        SizedBox(height: 8),
+
+        // Calendar grid
+        ...List.generate(6, (weekIndex) {
+          return Padding(
+            padding: EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(7, (dayIndex) {
+                int dayNumber = weekIndex * 7 +
+                    dayIndex +
+                    1 -
+                    (_calendarData!.firstDayOfWeek - 1);
+
+                if (dayNumber < 1 || dayNumber > _calendarData!.daysInMonth) {
+                  return Container(width: 36, height: 36);
+                }
+
+                final dayData = daysMap[dayNumber];
+                final isToday = now.year == _calendarData!.year &&
+                    now.month == _calendarData!.month &&
+                    now.day == dayNumber;
+
+                return _buildDayCell(dayNumber, dayData, isToday);
+              }),
+            ),
+          );
+        }).where((row) {
+          // Filter out completely empty rows
+          return true;
+        }).toList(),
+      ],
+    );
+  }
+
+  Widget _buildDayCell(int day, CalendarDay? data, bool isToday) {
+    final intensity = data?.intensity ?? 0;
+    final quizCount = data?.quizCount ?? 0;
+
+    Color cellColor;
+    if (isToday) {
+      cellColor = Color(0xFF6366F1);
+    } else if (intensity > 0) {
+      cellColor = Color(0xFF6366F1).withOpacity(0.2 + (intensity * 0.2));
+    } else {
+      cellColor = Color(0xFFF3F4F6);
+    }
+
+    return GestureDetector(
+      onTap: quizCount > 0 ? () => _showDayDetails(data!) : null,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: cellColor,
+          borderRadius: BorderRadius.circular(6),
+          border:
+              isToday ? Border.all(color: Color(0xFF6366F1), width: 2) : null,
+        ),
+        child: Center(
+          child: Text(
+            day.toString(),
+            style: TextStyle(
+              fontSize: 12,
+              color:
+                  isToday || intensity > 2 ? Colors.white : Color(0xFF1F2937),
+              fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIntensityLegend() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text('Less', style: TextStyle(fontSize: 10, color: Color(0xFF6B7280))),
+        SizedBox(width: 8),
+        ...List.generate(5, (index) {
+          return Padding(
+            padding: EdgeInsets.only(left: 4),
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: index == 0
+                    ? Color(0xFFF3F4F6)
+                    : Color(0xFF6366F1).withOpacity(0.2 + (index * 0.2)),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          );
+        }),
+        SizedBox(width: 8),
+        Text('More', style: TextStyle(fontSize: 10, color: Color(0xFF6B7280))),
+      ],
+    );
+  }
+
+  void _showDayDetails(CalendarDay day) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Activity on ${day.date}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Quizzes completed: ${day.quizCount}'),
+            SizedBox(height: 8),
+            Text('Average accuracy: ${day.accuracy.toStringAsFixed(1)}%'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close'),
           ),
         ],
       ),

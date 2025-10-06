@@ -4,7 +4,7 @@ class DashboardData {
   final List<WeeklyProgress> weeklyProgress;
   final List<ActivityHeatmap> activityHeatmap;
   final StreakData streak;
-  final List<RecentActivity> recentActivity;
+  final List<RecentSession> recentSessions;
 
   DashboardData({
     required this.overallStats,
@@ -12,7 +12,7 @@ class DashboardData {
     required this.weeklyProgress,
     required this.activityHeatmap,
     required this.streak,
-    required this.recentActivity,
+    required this.recentSessions,
   });
 
   factory DashboardData.fromJson(Map<String, dynamic> json) {
@@ -28,8 +28,8 @@ class DashboardData {
           .map((item) => ActivityHeatmap.fromJson(item))
           .toList(),
       streak: StreakData.fromJson(json['streak'] ?? {}),
-      recentActivity: (json['recent_activity'] as List? ?? [])
-          .map((item) => RecentActivity.fromJson(item))
+      recentSessions: (json['recent_sessions'] as List? ?? [])
+          .map((item) => RecentSession.fromJson(item))
           .toList(),
     );
   }
@@ -37,10 +37,12 @@ class DashboardData {
 
 class OverallStats {
   final int totalQuizzes;
-  final int accuracy;
+  final double accuracy;
   final int wordsLearned;
   final int avgTimeSpent;
   final int quizzesThisWeek;
+  final int totalCorrect;
+  final int totalQuestions;
 
   OverallStats({
     required this.totalQuizzes,
@@ -48,38 +50,48 @@ class OverallStats {
     required this.wordsLearned,
     required this.avgTimeSpent,
     required this.quizzesThisWeek,
+    required this.totalCorrect,
+    required this.totalQuestions,
   });
 
   factory OverallStats.fromJson(Map<String, dynamic> json) {
     return OverallStats(
       totalQuizzes: json['total_quizzes'] ?? 0,
-      accuracy: json['accuracy'] ?? 0,
+      accuracy: (json['accuracy'] ?? 0).toDouble(),
       wordsLearned: json['words_learned'] ?? 0,
-      avgTimeSpent: json['avg_time_spent'] ?? 0,
+      avgTimeSpent: json['avg_time_seconds'] ?? 0,
       quizzesThisWeek: json['quizzes_this_week'] ?? 0,
+      totalCorrect: json['total_correct'] ?? 0,
+      totalQuestions: json['total_questions'] ?? 0,
     );
   }
 }
 
 class PerformanceByType {
   final String testType;
-  final int total;
-  final int correct;
-  final int accuracy;
+  final int totalSessions;
+  final int totalCorrect;
+  final int totalQuestions;
+  final double avgAccuracy;
+  final int avgTimeSeconds;
 
   PerformanceByType({
     required this.testType,
-    required this.total,
-    required this.correct,
-    required this.accuracy,
+    required this.totalSessions,
+    required this.totalCorrect,
+    required this.totalQuestions,
+    required this.avgAccuracy,
+    required this.avgTimeSeconds,
   });
 
   factory PerformanceByType.fromJson(Map<String, dynamic> json) {
     return PerformanceByType(
       testType: json['test_type'] ?? '',
-      total: json['total'] ?? 0,
-      correct: json['correct'] ?? 0,
-      accuracy: json['accuracy'] ?? 0,
+      totalSessions: json['total_sessions'] ?? 0,
+      totalCorrect: json['total_correct'] ?? 0,
+      totalQuestions: json['total_questions'] ?? 0,
+      avgAccuracy: (json['avg_accuracy'] ?? 0).toDouble(),
+      avgTimeSeconds: json['avg_time_seconds'] ?? 0,
     );
   }
 }
@@ -87,13 +99,13 @@ class PerformanceByType {
 class WeeklyProgress {
   final String day;
   final String date;
-  final int quizzes;
-  final int accuracy;
+  final int quizCount;
+  final double accuracy;
 
   WeeklyProgress({
     required this.day,
     required this.date,
-    required this.quizzes,
+    required this.quizCount,
     required this.accuracy,
   });
 
@@ -101,8 +113,8 @@ class WeeklyProgress {
     return WeeklyProgress(
       day: json['day'] ?? '',
       date: json['date'] ?? '',
-      quizzes: json['quizzes'] ?? 0,
-      accuracy: json['accuracy'] ?? 0,
+      quizCount: json['quiz_count'] ?? 0,
+      accuracy: (json['accuracy'] ?? 0).toDouble(),
     );
   }
 }
@@ -130,39 +142,51 @@ class ActivityHeatmap {
 class StreakData {
   final int currentStreak;
   final int bestStreak;
+  final String? lastActivity;
 
   StreakData({
     required this.currentStreak,
     required this.bestStreak,
+    this.lastActivity,
   });
 
   factory StreakData.fromJson(Map<String, dynamic> json) {
     return StreakData(
       currentStreak: json['current_streak'] ?? 0,
       bestStreak: json['best_streak'] ?? 0,
+      lastActivity: json['last_activity'],
     );
   }
 }
 
-class RecentActivity {
-  final String date;
-  final int quizzes;
-  final int correct;
-  final int accuracy;
+class RecentSession {
+  final int id;
+  final String testType;
+  final int difficulty;
+  final String score;
+  final double accuracy;
+  final int timeSeconds;
+  final String completedAt;
 
-  RecentActivity({
-    required this.date,
-    required this.quizzes,
-    required this.correct,
+  RecentSession({
+    required this.id,
+    required this.testType,
+    required this.difficulty,
+    required this.score,
     required this.accuracy,
+    required this.timeSeconds,
+    required this.completedAt,
   });
 
-  factory RecentActivity.fromJson(Map<String, dynamic> json) {
-    return RecentActivity(
-      date: json['date'] ?? '',
-      quizzes: json['quizzes'] ?? 0,
-      correct: json['correct'] ?? 0,
-      accuracy: json['accuracy'] ?? 0,
+  factory RecentSession.fromJson(Map<String, dynamic> json) {
+    return RecentSession(
+      id: json['id'] ?? 0,
+      testType: json['test_type'] ?? '',
+      difficulty: json['difficulty'] ?? 0,
+      score: json['score'] ?? '',
+      accuracy: (json['accuracy'] ?? 0).toDouble(),
+      timeSeconds: json['time_seconds'] ?? 0,
+      completedAt: json['completed_at'] ?? '',
     );
   }
 }
@@ -170,22 +194,31 @@ class RecentActivity {
 class WeakWord {
   final int id;
   final String word;
-  final int attempts;
-  final int correct;
+  final String definition;
+  final int totalAttempts;
+  final int correctAttempts;
+  final int incorrectAttempts;
+  final double accuracy;
 
   WeakWord({
     required this.id,
     required this.word,
-    required this.attempts,
-    required this.correct,
+    required this.definition,
+    required this.totalAttempts,
+    required this.correctAttempts,
+    required this.incorrectAttempts,
+    required this.accuracy,
   });
 
   factory WeakWord.fromJson(Map<String, dynamic> json) {
     return WeakWord(
       id: json['id'] ?? 0,
       word: json['word'] ?? '',
-      attempts: json['attempts'] ?? 0,
-      correct: json['correct'] ?? 0,
+      definition: json['definition'] ?? '',
+      totalAttempts: json['total_attempts'] ?? 0,
+      correctAttempts: json['correct_attempts'] ?? 0,
+      incorrectAttempts: json['incorrect_attempts'] ?? 0,
+      accuracy: (json['accuracy'] ?? 0).toDouble(),
     );
   }
 }

@@ -9,6 +9,7 @@ import '../models/exam_result.dart';
 import '../models/quiz_result.dart';
 import '../models/quiz_session.dart';
 import '../models/dashboard_data.dart';
+import '../models/calendar_heatmap.dart';
 import 'storage_service.dart';
 
 class ApiResponse<T> {
@@ -1023,6 +1024,34 @@ class ApiService {
     } catch (e) {
       print('Error getting quiz history: $e');
       rethrow;
+    }
+  }
+
+  Future<CalendarHeatmapData> getCalendarHeatmap({
+    required int year,
+    required int month,
+  }) async {
+    String token = StorageService().authToken!;
+    final uri = Uri.parse('${ApiConstants.baseUrl}/calendar-heatmap').replace(
+      queryParameters: {
+        'year': year,
+        'month': month,
+      },
+    );
+    print('Fetching calendar heatmap from $uri');
+    final response = await _client.get(
+      uri,
+      headers: {
+        ...ApiConstants.defaultHeaders,
+        'Authorization': 'Bearer $token',
+      },
+    ).timeout(ApiConstants.connectTimeout);
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      print('Calendar heatmap data: $data');
+      return CalendarHeatmapData.fromJson(data['data'] ?? {});
+    } else {
+      throw Exception('Failed to load calendar heatmap');
     }
   }
 
