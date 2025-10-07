@@ -49,7 +49,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         _errorMessage = null;
       });
 
-      final token = StorageService().authToken;
+      final token = StorageService().authToken!;
       if (token == null) throw Exception('No auth token');
 
       final response = await _apiService.getNotifications(

@@ -1147,11 +1147,10 @@ class ApiService {
       String token = StorageService().authToken!;
       final uri = Uri.parse('${ApiConstants.baseUrl}/notifications').replace(
         queryParameters: {
-          'page': page,
+          'page': page.toString(),
           if (type != null) 'type': type,
         },
       );
-
       final response = await _client.get(
         uri,
         headers: {
