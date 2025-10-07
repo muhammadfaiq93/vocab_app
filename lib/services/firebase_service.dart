@@ -115,17 +115,49 @@ class FirebaseService {
   }
 
   Future<void> _getFCMToken() async {
-    try {
-      _fcmToken = await _messaging.getToken();
-      print('FCM Token: $_fcmToken');
-
-      if (_fcmToken != null) {
-        await _sendTokenToBackend(_fcmToken!);
+  try {
+    if (Platform.isIOS) {
+      // For iOS, get APNS token first
+      String? apnsToken = await _messaging.getAPNSToken();
+      
+      if (apnsToken == null) {
+        print('Waiting for APNS token...');
+        // Wait a bit and retry
+        await Future.delayed(Duration(seconds: 2));
+        apnsToken = await _messaging.getAPNSToken();
       }
-    } catch (e) {
-      print('Error getting FCM token: $e');
+      
+      if (apnsToken != null) {
+        print('APNS Token: $apnsToken');
+      } else {
+        print('Warning: APNS token not available yet. FCM token will be retrieved later.');
+        // Listen for APNS token
+        _messaging.onTokenRefresh.listen((token) {
+          _fcmToken = token;
+          print('FCM Token (delayed): $token');
+          _sendTokenToBackend(token);
+        });
+        return;
+      }
     }
+    
+    // Get FCM token
+    _fcmToken = await _messaging.getToken();
+    print('FCM Token: $_fcmToken');
+    
+    if (_fcmToken != null) {
+      await _sendTokenToBackend(_fcmToken!);
+    }
+  } catch (e) {
+    print('Error getting FCM token: $e');
+    // Set up listener for when token becomes available
+    _messaging.onTokenRefresh.listen((token) {
+      _fcmToken = token;
+      print('FCM Token (from refresh): $token');
+      _sendTokenToBackend(token);
+    });
   }
+}
 
   Future<void> _sendTokenToBackend(String token) async {
     try {
