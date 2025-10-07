@@ -15,6 +15,7 @@ import 'dynamic_learning_screen.dart';
 import 'quiz_screen.dart';
 import 'profile_screen.dart';
 import '../models/calendar_heatmap.dart';
+import 'notification_screen.dart';
 
 class ProgressDashboard extends StatefulWidget {
   @override
@@ -260,18 +261,46 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
                       IconButton(
                         icon: Icon(Icons.notifications_outlined,
                             color: Colors.white, size: 28),
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NotificationScreen(),
+                            ),
+                          );
+                        },
                       ),
+                      // Show badge with unread count
                       Positioned(
                         right: 8,
                         top: 8,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Color(0xFFEF4444),
-                            shape: BoxShape.circle,
-                          ),
+                        child: FutureBuilder<int>(
+                          future: _apiService.getUnreadNotificationCount(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData && snapshot.data! > 0) {
+                              return Container(
+                                padding: EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Color(0xFFEF4444),
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: BoxConstraints(
+                                  minWidth: 16,
+                                  minHeight: 16,
+                                ),
+                                child: Text(
+                                  '${snapshot.data}',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              );
+                            }
+                            return SizedBox();
+                          },
                         ),
                       ),
                     ],

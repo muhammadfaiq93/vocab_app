@@ -10,6 +10,7 @@ import '../models/quiz_result.dart';
 import '../models/quiz_session.dart';
 import '../models/dashboard_data.dart';
 import '../models/calendar_heatmap.dart';
+import '../models/notification.dart';
 import 'storage_service.dart';
 import 'firebase_service.dart';
 
@@ -1136,6 +1137,133 @@ class ApiService {
       );
     }
   }
+
+  // Get notifications
+  Future<NotificationResponse> getNotifications({
+    int page = 1,
+    String? type,
+  }) async {
+    try {
+      String token = StorageService().authToken!;
+      final uri = Uri.parse('${ApiConstants.baseUrl}/notifications').replace(
+        queryParameters: {
+          'page': page,
+          if (type != null) 'type': type,
+        },
+      );
+
+      final response = await _client.get(
+        uri,
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return NotificationResponse.fromJson(data['data'] ?? {});
+        // print('Calendar heatmap data: $data');
+        //return CalendarHeatmapData.fromJson(data['data'] ?? {});
+      } else {
+        throw Exception('Failed to load notification: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching notification: $e');
+    }
+  }
+
+// Get unread count
+  Future<int> getUnreadNotificationCount() async {
+    try {
+      String token = StorageService().authToken!;
+      final uri =
+          Uri.parse('${ApiConstants.baseUrl}/notifications/unread-count');
+
+      final response = await _client.get(
+        uri,
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          return data['count'];
+        }
+        return 0;
+      } else {
+        throw Exception('Failed to load notification: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching notification: $e');
+    }
+  }
+
+// Mark as read
+  Future<void> markNotificationAsRead({
+    required int notificationId,
+  }) async {
+    try {
+      String token = StorageService().authToken!;
+      await _client.put(
+          Uri.parse(
+              '${ApiConstants.baseUrl}/notifications/$notificationId/read'),
+          headers: {
+            ...ApiConstants.defaultHeaders,
+            'Authorization': 'Bearer $token',
+          }).timeout(ApiConstants.connectTimeout);
+    } catch (e) {
+      throw Exception('Error marking notification as read: $e');
+    }
+  }
+
+// Mark all as read
+  Future<void> markAllNotificationsAsRead() async {
+    try {
+      String token = StorageService().authToken!;
+      await _client.put(
+          Uri.parse('${ApiConstants.baseUrl}/notifications/read-all'),
+          headers: {
+            ...ApiConstants.defaultHeaders,
+            'Authorization': 'Bearer $token',
+          }).timeout(ApiConstants.connectTimeout);
+    } catch (e) {
+      throw Exception('Error marking notification as read: $e');
+    }
+  }
+
+// Delete notification
+  Future<void> deleteNotification({
+    required int notificationId,
+  }) async {
+    try {
+      String token = StorageService().authToken!;
+      await _client.delete(
+          Uri.parse('${ApiConstants.baseUrl}/notifications/$notificationId'),
+          headers: {
+            ...ApiConstants.defaultHeaders,
+            'Authorization': 'Bearer $token',
+          }).timeout(ApiConstants.connectTimeout);
+    } catch (e) {
+      throw Exception('Error deleting notification: $e');
+    }
+  }
+
+// Delete all notifications
+  Future<void> deleteAllNotifications() async {
+    try {
+      String token = StorageService().authToken!;
+      await _client
+          .delete(Uri.parse('${ApiConstants.baseUrl}/notifications'), headers: {
+        ...ApiConstants.defaultHeaders,
+        'Authorization': 'Bearer $token',
+      }).timeout(ApiConstants.connectTimeout);
+    } catch (e) {
+      throw Exception('Error deleting notification: $e');
+    }
+  }
+
   // ==================== CLEANUP ====================
 
   // Dispose method for cleanup
