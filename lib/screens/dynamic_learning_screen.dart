@@ -7,8 +7,8 @@ import '../models/vocabulary_card.dart';
 
 class DynamicLearningScreen extends StatefulWidget {
   final int wordCount;
-  final int difficulty; // Add this
-  final String? categoryName; // Add this for display
+  final int difficulty;
+  final String? categoryName;
 
   const DynamicLearningScreen({
     Key? key,
@@ -37,7 +37,7 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
   Future<void> _fetchVocabulary() async {
     try {
       final cards = await _apiService.getVocabularyByDifficulty(
-        difficulty: widget.difficulty, // Pass from modal
+        difficulty: widget.difficulty,
         count: widget.wordCount,
       );
 
@@ -55,136 +55,27 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width > 600;
+
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is! AuthAuthenticated) {
-          return Scaffold(
-            body: Center(child: Text('Please log in to access learning')),
-          );
+          return _buildUnauthenticatedScreen();
         }
 
         final user = state.user;
 
         if (isLoading) {
-          return Scaffold(
-            body: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                ),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 16),
-                    Text(
-                      'Loading ${(widget.wordCount - 10)} To ${widget.wordCount} words...',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
+          return _buildLoadingScreen(isTablet);
         }
 
         if (errorMessage != null) {
-          return Scaffold(
-            body: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                ),
-              ),
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline, color: Colors.white, size: 64),
-                      SizedBox(height: 16),
-                      Text(
-                        'Oops!',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 16,
-                        ),
-                      ),
-                      SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            isLoading = true;
-                            errorMessage = null;
-                          });
-                          _fetchVocabulary();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Color(0xFF6366F1),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: Text(
-                          'Try Again',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
+          return _buildErrorScreen(isTablet);
         }
 
         if (vocabularyCards.isEmpty) {
-          return Scaffold(
-            body: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  'No vocabulary words found',
-                  style: TextStyle(color: Colors.white, fontSize: 18),
-                ),
-              ),
-            ),
-          );
+          return _buildEmptyScreen();
         }
 
         final currentCard = vocabularyCards[currentWordIndex];
@@ -201,27 +92,38 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
             child: SafeArea(
               child: Column(
                 children: [
-                  _buildHeader(user),
+                  _buildHeader(user, isTablet),
                   Expanded(
                     child: Container(
-                      margin: EdgeInsets.only(top: 10),
+                      margin: EdgeInsets.only(top: 6),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(30),
-                          topRight: Radius.circular(30),
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
                         ),
                       ),
-                      child: SingleChildScrollView(
-                        padding: EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            _buildProgressIndicator(),
-                            SizedBox(height: 20),
-                            _buildWordCard(currentCard),
-                            SizedBox(height: 30),
-                            _buildNavigationButtons(),
-                            SizedBox(height: 20),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
+                        ),
+                        child: CustomScrollView(
+                          physics: BouncingScrollPhysics(),
+                          slivers: [
+                            SliverPadding(
+                              padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
+                              sliver: SliverList(
+                                delegate: SliverChildListDelegate([
+                                  _buildProgressIndicator(isTablet),
+                                  SizedBox(height: 12),
+                                  _buildWordCard(currentCard, isTablet),
+                                  SizedBox(height: 16),
+                                  _buildNavigationButtons(isTablet),
+                                  SizedBox(height: 12),
+                                ]),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -236,7 +138,205 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
     );
   }
 
-  Widget _buildHeader(dynamic user) {
+  Widget _buildUnauthenticatedScreen() {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          ),
+        ),
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.lock_outline, color: Colors.white, size: 64),
+                SizedBox(height: 16),
+                Text(
+                  'Authentication Required',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Please log in to access the learning module',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingScreen(bool isTablet) {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 3.5,
+                ),
+              ),
+              SizedBox(height: 20),
+              Text(
+                'Loading Your Vocabulary',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Preparing ${vocabularyCards.isEmpty ? widget.wordCount : vocabularyCards.length} words...',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorScreen(bool isTablet) {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          ),
+        ),
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, color: Colors.white, size: 56),
+                SizedBox(height: 16),
+                Text(
+                  'Something Went Wrong',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  errorMessage ?? 'An unexpected error occurred',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 14,
+                  ),
+                ),
+                SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      isLoading = true;
+                      errorMessage = null;
+                    });
+                    _fetchVocabulary();
+                  },
+                  icon: Icon(Icons.refresh, size: 18),
+                  label: Text(
+                    'Try Again',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Color(0xFF6366F1),
+                    padding: EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyScreen() {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.library_books, color: Colors.white, size: 64),
+              SizedBox(height: 16),
+              Text(
+                'No Words Available',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'No vocabulary words found',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(dynamic user, bool isTablet) {
     String userName = '';
     if (user is Map<String, dynamic>) {
       userName = user['name']?.toString().trim() ?? '';
@@ -249,309 +349,291 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
         firstName.isNotEmpty ? firstName[0].toUpperCase() : 'U';
 
     return Padding(
-      padding: EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 16),
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.white.withOpacity(0.2),
-                    child: Text(
-                      userInitial,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    firstName,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: Colors.white.withOpacity(0.25),
+            child: Text(
+              userInitial,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
               ),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: Icon(Icons.close, color: Colors.white, size: 24),
-              ),
-            ],
-          ),
-          SizedBox(height: 25),
-          Text(
-            "Today's Word!",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 8),
-          Text(
-            'Learning ${vocabularyCards.length} words from ${(widget.wordCount - 10)} to ${widget.wordCount} amazing words',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 14,
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  firstName,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '${vocabularyCards.length} words • Level ${widget.difficulty}',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
+          ),
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: Icon(Icons.close, color: Colors.white, size: 22),
+            padding: EdgeInsets.all(8),
+            constraints: BoxConstraints(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildWordCard(VocabularyCard card) {
+  Widget _buildWordCard(VocabularyCard card, bool isTablet) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(24),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: Offset(0, 4),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
           ),
         ],
+        border: Border.all(color: Color(0xFFF3F4F6)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Word Title
-          Center(
-            child: Container(
-              padding: EdgeInsets.symmetric(vertical: 10, horizontal: 32),
-              decoration: BoxDecoration(
-                color: Color(0xFFF8F9FF),
-                borderRadius: BorderRadius.circular(20),
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF6366F1).withOpacity(0.08),
+                  Color(0xFF8B5CF6).withOpacity(0.08),
+                ],
               ),
-              child: Text(
-                card.word,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-            ),
-          ),
-          SizedBox(height: 24),
-
-          // Category
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Category:',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  card.category,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF374151),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-
-          // Pronunciation
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Pronunciation:',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  card.pronunciation,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF374151),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 30),
-
-          // Definition
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Color(0xFFFBBF24).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(
-                  Icons.lightbulb,
-                  color: Color(0xFFFBBF24),
-                  size: 18,
-                ),
-              ),
-              SizedBox(width: 8),
-              Text(
-                'Definition',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          Padding(
-            padding: EdgeInsets.only(left: 32),
-            child: Text(
-              card.definition,
-              style: TextStyle(
-                fontSize: 15,
-                color: Color(0xFF6B7280),
-                height: 1.5,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Color(0xFF6366F1).withOpacity(0.2),
+                width: 1.5,
               ),
             ),
-          ),
-          SizedBox(height: 24),
-
-          // Example
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Color(0xFF10B981).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(
-                  Icons.format_quote,
-                  color: Color(0xFF10B981),
-                  size: 18,
-                ),
-              ),
-              SizedBox(width: 8),
-              Text(
-                'Example',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          Padding(
-            padding: EdgeInsets.only(left: 32),
-            child: Text(
-              '"${card.example}"',
-              style: TextStyle(
-                fontSize: 15,
-                fontStyle: FontStyle.italic,
-                color: Color(0xFF6B7280),
-                height: 1.5,
-              ),
-            ),
-          ),
-
-          if (card.synonyms.isNotEmpty) ...[
-            SizedBox(height: 24),
-            _buildWordList('Synonyms', card.synonyms, Color(0xFF6366F1)),
-          ],
-
-          if (card.antonyms.isNotEmpty) ...[
-            SizedBox(height: 24),
-            _buildWordList('Antonyms', card.antonyms, Color(0xFFEF4444)),
-          ],
-
-          SizedBox(height: 32),
-
-          // Action Buttons
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    _markAsLearned(card);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF10B981),
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.white, size: 18),
-                      SizedBox(width: 8),
-                      Text(
-                        'Mark as Learned',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+            child: Column(
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF6366F1).withOpacity(0.15),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
                       ),
                     ],
                   ),
+                  child: Text(
+                    card.word,
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1F2937),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding:
+                            EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Color(0xFF6366F1),
+                                    Color(0xFF8B5CF6)
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Icon(
+                                Icons.category_outlined,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Type',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: Color(0xFF6B7280),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    card.category,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF6366F1),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        padding:
+                            EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Color(0xFF8B5CF6),
+                                    Color(0xFFA855F7)
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Icon(
+                                Icons.record_voice_over,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Pronunciation',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: Color(0xFF6B7280),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    card.pronunciation,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF8B5CF6),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 14),
+          _buildCompactSection('Definition', card.definition,
+              Icons.lightbulb_outline, Color(0xFFFBBF24)),
+          SizedBox(height: 12),
+          _buildCompactSection('Example', '"${card.example}"',
+              Icons.format_quote, Color(0xFF10B981),
+              isItalic: true),
+          if (card.synonyms.isNotEmpty) ...[
+            SizedBox(height: 12),
+            _buildWordChips('Synonyms', card.synonyms, Color(0xFF6366F1)),
+          ],
+          if (card.antonyms.isNotEmpty) ...[
+            SizedBox(height: 12),
+            _buildWordChips('Antonyms', card.antonyms, Color(0xFFEF4444)),
+          ],
+          SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _markAsLearned(card),
+                  icon: Icon(Icons.check_circle_outline, size: 16),
+                  label: Text(
+                    'Learned',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
                 ),
               ),
-              SizedBox(width: 16),
+              SizedBox(width: 10),
               Container(
                 decoration: BoxDecoration(
-                  color: Color(0xFF6366F1),
-                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: IconButton(
-                  onPressed: () {
-                    _toggleBookmark(card);
-                  },
+                  onPressed: () => _toggleBookmark(card),
                   icon: Icon(
                     card.isFavorite ? Icons.bookmark : Icons.bookmark_outline,
                     color: Colors.white,
-                    size: 24,
+                    size: 20,
                   ),
-                  padding: EdgeInsets.all(12),
+                  padding: EdgeInsets.all(10),
+                  constraints: BoxConstraints(),
                 ),
               ),
             ],
@@ -561,35 +643,84 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
     );
   }
 
-  Widget _buildWordList(String title, List<String> words, Color color) {
+  Widget _buildCompactSection(
+      String title, String content, IconData icon, Color color,
+      {bool isItalic = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Icon(icon, color: color, size: 14),
+            ),
+            SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 6),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            content,
+            style: TextStyle(
+              fontSize: 13,
+              color: Color(0xFF374151),
+              height: 1.4,
+              fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWordChips(String title, List<String> words, Color color) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
           style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
             color: Color(0xFF1F2937),
           ),
         ),
-        SizedBox(height: 12),
+        SizedBox(height: 6),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 6,
+          runSpacing: 6,
           children: words.map((word) {
             return Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: color.withOpacity(0.3)),
+                color: color.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: color.withOpacity(0.25)),
               ),
               child: Text(
                 word,
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                   color: color,
                 ),
               ),
@@ -600,13 +731,17 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
     );
   }
 
-  Widget _buildProgressIndicator() {
+  Widget _buildProgressIndicator(bool isTablet) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Color(0xFFF8F9FF),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Color(0xFFE5E7EB), width: 1),
+        gradient: LinearGradient(
+          colors: [
+            Color(0xFF6366F1).withOpacity(0.08),
+            Color(0xFF8B5CF6).withOpacity(0.08),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
@@ -614,23 +749,25 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Word ${currentWordIndex + 1} of ${vocabularyCards.length}',
+                'Word ${currentWordIndex + 1}/${vocabularyCards.length}',
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
                   color: Color(0xFF6366F1),
                 ),
               ),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Color(0xFF10B981),
-                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   'Level ${vocabularyCards[currentWordIndex].difficultyLevel}',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -638,14 +775,14 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
               ),
             ],
           ),
-          SizedBox(height: 12),
+          SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: (currentWordIndex + 1) / vocabularyCards.length,
               backgroundColor: Color(0xFFE5E7EB),
               valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
-              minHeight: 8,
+              minHeight: 6,
             ),
           ),
         ],
@@ -653,98 +790,98 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
     );
   }
 
-  Widget _buildNavigationButtons() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: currentWordIndex > 0 ? _previousWord : null,
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  color: currentWordIndex > 0
-                      ? Color(0xFF10B981)
-                      : Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(16),
+  Widget _buildNavigationButtons(bool isTablet) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildNavButton(
+            label: 'Previous',
+            icon: Icons.arrow_back_ios_rounded,
+            isEnabled: currentWordIndex > 0,
+            onTap: _previousWord,
+            isPrevious: true,
+          ),
+        ),
+        SizedBox(width: 10),
+        Container(
+          padding: EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
+            ),
+            shape: BoxShape.circle,
+          ),
+          child: Text('📚', style: TextStyle(fontSize: 18)),
+        ),
+        SizedBox(width: 10),
+        Expanded(
+          child: _buildNavButton(
+            label: 'Next',
+            icon: Icons.arrow_forward_ios_rounded,
+            isEnabled: currentWordIndex < vocabularyCards.length - 1,
+            onTap: _nextWord,
+            isPrevious: false,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNavButton({
+    required String label,
+    required IconData icon,
+    required bool isEnabled,
+    required VoidCallback onTap,
+    required bool isPrevious,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isEnabled ? onTap : null,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            gradient: isEnabled
+                ? LinearGradient(
+                    colors: isPrevious
+                        ? [Color(0xFF10B981), Color(0xFF059669)]
+                        : [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                  )
+                : null,
+            color: isEnabled ? null : Color(0xFFE5E7EB),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (isPrevious) ...[
+                Icon(
+                  icon,
+                  color: isEnabled ? Colors.white : Color(0xFF9CA3AF),
+                  size: 16,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.arrow_back_ios,
-                      color: currentWordIndex > 0
-                          ? Colors.white
-                          : Color(0xFF9CA3AF),
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Previous',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: currentWordIndex > 0
-                            ? Colors.white
-                            : Color(0xFF9CA3AF),
-                      ),
-                    ),
-                  ],
+                SizedBox(width: 6),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: isEnabled ? Colors.white : Color(0xFF9CA3AF),
                 ),
               ),
-            ),
-          ),
-          SizedBox(width: 16),
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Color(0xFFFBBF24),
-              shape: BoxShape.circle,
-            ),
-            child: Text('📚', style: TextStyle(fontSize: 20)),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: GestureDetector(
-              onTap: currentWordIndex < vocabularyCards.length - 1
-                  ? _nextWord
-                  : null,
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  color: currentWordIndex < vocabularyCards.length - 1
-                      ? Color(0xFF6366F1)
-                      : Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(16),
+              if (!isPrevious) ...[
+                SizedBox(width: 6),
+                Icon(
+                  icon,
+                  color: isEnabled ? Colors.white : Color(0xFF9CA3AF),
+                  size: 16,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Next',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: currentWordIndex < vocabularyCards.length - 1
-                            ? Colors.white
-                            : Color(0xFF9CA3AF),
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      color: currentWordIndex < vocabularyCards.length - 1
-                          ? Colors.white
-                          : Color(0xFF9CA3AF),
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+              ],
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -768,20 +905,47 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
   void _markAsLearned(VocabularyCard card) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${card.word} marked as learned!'),
+        content: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.white, size: 18),
+            SizedBox(width: 10),
+            Text('${card.word} marked as learned!'),
+          ],
+        ),
         backgroundColor: Color(0xFF10B981),
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: EdgeInsets.all(12),
+        duration: Duration(seconds: 2),
       ),
     );
   }
 
   void _toggleBookmark(VocabularyCard card) {
+    setState(() {
+      //card.isFavorite = !card.isFavorite;
+    });
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-            card.isFavorite ? 'Removed from favorites' : 'Added to favorites'),
+        content: Row(
+          children: [
+            Icon(
+              card.isFavorite ? Icons.bookmark : Icons.bookmark_outline,
+              color: Colors.white,
+              size: 18,
+            ),
+            SizedBox(width: 10),
+            Text(
+              card.isFavorite ? 'Added to favorites' : 'Removed from favorites',
+            ),
+          ],
+        ),
         backgroundColor: Color(0xFF6366F1),
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: EdgeInsets.all(12),
+        duration: Duration(seconds: 2),
       ),
     );
   }
