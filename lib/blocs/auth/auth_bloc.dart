@@ -65,7 +65,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           token: response.data!.token,
         ));
       } else {
-        emit(AuthError(response.message ?? 'Login failed'));
+        // Check if this is an account pending activation error
+        final message = response.message ?? 'Login failed';
+        emit(AuthError(message));
       }
     } catch (e) {
       emit(AuthError('An error occurred: ${e.toString()}'));
@@ -87,17 +89,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         age: event.age,
       );
 
-      if (response.success && response.data != null) {
-        // Save to storage for persistence
-        await _storageService.saveLoginData(
-          response.data!.user,
-          response.data!.token,
-        );
-
-        emit(AuthAuthenticated(
-          user: response.data!.user,
-          token: response.data!.token,
-        ));
+      if (response.success) {
+        // IMPORTANT: Registration successful, but account needs activation
+        // Don't authenticate user yet - they need to check email first
+        // Return to initial state so the UI can show the email dialog
+        //emit(AuthInitial());
+        final message = response.message ?? 'Registration failed';
+        emit(AuthError(message));
       } else {
         emit(AuthError(response.message ?? 'Registration failed'));
       }

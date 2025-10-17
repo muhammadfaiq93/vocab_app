@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
 import '../models/child_user.dart';
@@ -53,7 +54,7 @@ class ApiService {
 
   // ==================== AUTH METHODS ====================
 
-  // Login method
+  /// Login method - handles authentication and account status
   Future<ApiResponse<LoginResponse>> login({
     required String email,
     required String password,
@@ -61,7 +62,8 @@ class ApiService {
     try {
       final deviceType = Platform.isIOS ? 'ios' : 'android';
       await FirebaseService().initialize();
-      final FCMToken = FirebaseService().fcmToken;
+      final fcmToken = FirebaseService().fcmToken;
+
       final response = await _client
           .post(
             Uri.parse(ApiConstants.loginEndpoint),
@@ -70,16 +72,21 @@ class ApiService {
               'email': email,
               'password': password,
               'device_type': deviceType,
-              'fcm_token': FCMToken,
+              'fcm_token': fcmToken,
             }),
           )
           .timeout(ApiConstants.connectTimeout);
 
-      return _handleLoginResponse(response);
+      return _handleAuthResponse(response, isLogin: true);
     } on SocketException {
       return const ApiResponse(
         success: false,
         message: 'No internet connection. Please check your network.',
+      );
+    } on TimeoutException {
+      return const ApiResponse(
+        success: false,
+        message: 'Connection timeout. Please try again.',
       );
     } on HttpException {
       return const ApiResponse(
@@ -99,7 +106,7 @@ class ApiService {
     }
   }
 
-  // Register method
+  /// Register method - creates account and sends activation email
   Future<ApiResponse<LoginResponse>> register({
     required String name,
     required String email,
@@ -120,11 +127,16 @@ class ApiService {
           )
           .timeout(ApiConstants.connectTimeout);
 
-      return _handleLoginResponse(response);
+      return _handleAuthResponse(response, isLogin: false);
     } on SocketException {
       return const ApiResponse(
         success: false,
         message: 'No internet connection. Please check your network.',
+      );
+    } on TimeoutException {
+      return const ApiResponse(
+        success: false,
+        message: 'Connection timeout. Please try again.',
       );
     } on HttpException {
       return const ApiResponse(
@@ -144,7 +156,7 @@ class ApiService {
     }
   }
 
-  // Logout method
+  /// Logout method - clears session from server
   Future<ApiResponse<void>> logout(String token) async {
     try {
       final response = await _client.post(
@@ -171,7 +183,7 @@ class ApiService {
 
   // ==================== LEARNING METHODS ====================
 
-  /// Get vocabulary cards for learning - returns typed VocabularyCard objects
+  /// Get vocabulary cards for learning
   Future<List<VocabularyCard>> getVocabularyCards({
     required String token,
     String? category,
@@ -208,6 +220,8 @@ class ApiService {
       }
     } on SocketException {
       throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } on HttpException {
       throw Exception('Network error occurred');
     } catch (e) {
@@ -215,7 +229,7 @@ class ApiService {
     }
   }
 
-  /// Get all categories - returns list of category names
+  /// Get all categories
   Future<List<String>> getCategories({
     required String token,
   }) async {
@@ -232,7 +246,6 @@ class ApiService {
         final data = json.decode(response.body);
         final categoriesData = data['data'] ?? [];
 
-        // If the API returns a list of category objects, extract the names
         if (categoriesData is List) {
           return categoriesData
               .map((category) {
@@ -253,6 +266,8 @@ class ApiService {
       }
     } on SocketException {
       throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } on HttpException {
       throw Exception('Network error occurred');
     } catch (e) {
@@ -260,11 +275,10 @@ class ApiService {
     }
   }
 
-  /// Mark a vocabulary card as learned - accepts both String and int
+  /// Mark a vocabulary card as learned
   Future<Map<String, dynamic>> markVocabularyAsLearned({
     required String token,
-    required dynamic
-        vocabularyId, // Changed to dynamic to accept both String and int
+    required dynamic vocabularyId,
   }) async {
     try {
       final response = await _client.post(
@@ -284,6 +298,8 @@ class ApiService {
       }
     } on SocketException {
       throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } on HttpException {
       throw Exception('Network error occurred');
     } catch (e) {
@@ -313,6 +329,8 @@ class ApiService {
       }
     } on SocketException {
       throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } on HttpException {
       throw Exception('Network error occurred');
     } catch (e) {
@@ -322,7 +340,7 @@ class ApiService {
 
   // ==================== EXAM METHODS ====================
 
-  /// Generate an exam - returns typed ExamQuestion objects
+  /// Generate an exam
   Future<List<ExamQuestion>> generateExam({
     required String token,
     String? category,
@@ -357,6 +375,8 @@ class ApiService {
       }
     } on SocketException {
       throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } on HttpException {
       throw Exception('Network error occurred');
     } catch (e) {
@@ -364,15 +384,14 @@ class ApiService {
     }
   }
 
-  /// Submit exam answers - accepts UserAnswer objects and returns ExamResult
+  /// Submit exam answers
   Future<ExamResult> submitExam({
     required String token,
-    required dynamic examId, // Accept both String and int
+    required dynamic examId,
     required List<UserAnswer> answers,
     int? timeSpent,
   }) async {
     try {
-      // Convert UserAnswer objects to JSON
       final answersJson = answers.map((answer) => answer.toJson()).toList();
 
       final body = <String, dynamic>{
@@ -380,7 +399,6 @@ class ApiService {
       };
       if (timeSpent != null) body['time_spent'] = timeSpent;
 
-      // Convert examId to int if it's a String
       final examIdInt = examId is String
           ? int.tryParse(examId.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0
           : examId;
@@ -404,6 +422,8 @@ class ApiService {
       }
     } on SocketException {
       throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } on HttpException {
       throw Exception('Network error occurred');
     } catch (e) {
@@ -411,7 +431,7 @@ class ApiService {
     }
   }
 
-  /// Get exam history with pagination - returns typed ExamResult objects
+  /// Get exam history with pagination
   Future<List<ExamResult>> getExamHistory({
     required String token,
     int? page,
@@ -443,6 +463,8 @@ class ApiService {
       }
     } on SocketException {
       throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } on HttpException {
       throw Exception('Network error occurred');
     } catch (e) {
@@ -450,77 +472,7 @@ class ApiService {
     }
   }
 
-  // ==================== PRIVATE HELPER METHODS ====================
-
-  // Private method to handle login/register responses
-  ApiResponse<LoginResponse> _handleLoginResponse(http.Response response) {
-    try {
-      final responseData = json.decode(response.body);
-
-      switch (response.statusCode) {
-        case 200:
-        case 201:
-          final loginResponse = LoginResponse.fromJson(responseData);
-          return ApiResponse(
-            success: true,
-            data: loginResponse,
-            statusCode: response.statusCode,
-          );
-
-        case 401:
-          return ApiResponse(
-            success: false,
-            message: responseData['message'] ?? 'Invalid email or password.',
-            statusCode: response.statusCode,
-          );
-
-        case 422:
-          String errorMessage = 'Validation failed.';
-
-          // Handle Laravel validation errors
-          if (responseData['errors'] != null) {
-            final errors = responseData['errors'] as Map<String, dynamic>;
-            final firstError = errors.values.first;
-            if (firstError is List && firstError.isNotEmpty) {
-              errorMessage = firstError.first.toString();
-            }
-          } else if (responseData['message'] != null) {
-            errorMessage = responseData['message'];
-          }
-
-          return ApiResponse(
-            success: false,
-            message: errorMessage,
-            statusCode: response.statusCode,
-          );
-
-        case 429:
-          return const ApiResponse(
-            success: false,
-            message: 'Too many requests. Please try again later.',
-          );
-
-        case 500:
-          return const ApiResponse(
-            success: false,
-            message: 'Server error. Please try again later.',
-          );
-
-        default:
-          return ApiResponse(
-            success: false,
-            message:
-                responseData['message'] ?? 'Request failed. Please try again.',
-            statusCode: response.statusCode,
-          );
-      }
-    } catch (e) {
-      return const ApiResponse(
-        success: false,
-        message: 'Failed to parse server response.',
-      );
-    }
-  }
+  // ==================== VOCABULARY METHODS ====================
 
   /// Get vocabulary by range
   Future<List<VocabularyCard>> getVocabularyByRange({
@@ -555,6 +507,8 @@ class ApiService {
       }
     } on SocketException {
       throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } on HttpException {
       throw Exception('Network error occurred');
     } catch (e) {
@@ -583,6 +537,7 @@ class ApiService {
           'Authorization': 'Bearer $token',
         },
       ).timeout(ApiConstants.connectTimeout);
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> vocabularyJson = data['data'] ?? [];
@@ -592,17 +547,23 @@ class ApiService {
       } else {
         throw Exception('Failed to load vocabulary: ${response.statusCode}');
       }
+    } on SocketException {
+      throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } catch (e) {
       throw Exception('Error fetching vocabulary: $e');
     }
   }
 
-  // Save quiz result
+  // ==================== QUIZ METHODS ====================
+
+  /// Save quiz result
   Future<QuizResultResponse> saveQuizResult(QuizResult quizResult) async {
     try {
       String token = StorageService().authToken!;
       final uri = Uri.parse('${ApiConstants.baseUrl}/quiz-results');
-      print('Posting to $uri with body: ${jsonEncode(quizResult.toJson())}');
+
       final response = await _client
           .post(
             uri,
@@ -620,12 +581,16 @@ class ApiService {
       } else {
         throw Exception('Failed to save quiz result: ${response.statusCode}');
       }
+    } on SocketException {
+      throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } catch (e) {
       throw Exception('Error saving quiz result: $e');
     }
   }
 
-  // Batch save quiz results
+  /// Batch save quiz results
   Future<List<QuizResultResponse>> saveQuizResults(
       List<QuizResult> quizResults) async {
     List<QuizResultResponse> responses = [];
@@ -640,6 +605,160 @@ class ApiService {
     }
 
     return responses;
+  }
+
+  /// Start a new quiz session
+  Future<int> startQuizSession({
+    required String testType,
+    required int difficulty,
+    required int totalQuestions,
+  }) async {
+    try {
+      String token = StorageService().authToken!;
+
+      final response = await _client
+          .post(
+            Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/start'),
+            headers: {
+              ...ApiConstants.defaultHeaders,
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'test_type': testType,
+              'difficulty': difficulty,
+              'total_questions': totalQuestions,
+            }),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return data['data']['session_id'];
+      } else {
+        throw Exception('Failed to start quiz session');
+      }
+    } on SocketException {
+      throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
+    } catch (e) {
+      throw Exception('Error starting quiz session: $e');
+    }
+  }
+
+  /// Finish quiz session with results
+  Future<void> finishQuizSession({
+    required int sessionId,
+    required int correctCount,
+    required int incorrectCount,
+    required int totalTimeSeconds,
+  }) async {
+    try {
+      String token = StorageService().authToken!;
+
+      final response = await _client
+          .put(
+            Uri.parse(
+                '${ApiConstants.baseUrl}/quiz-sessions/$sessionId/finish'),
+            headers: {
+              ...ApiConstants.defaultHeaders,
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'correct_count': correctCount,
+              'incorrect_count': incorrectCount,
+              'total_time_seconds': totalTimeSeconds,
+            }),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to finish quiz session');
+      }
+    } on SocketException {
+      throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
+    } catch (e) {
+      throw Exception('Error finishing quiz session: $e');
+    }
+  }
+
+  /// Abandon quiz session
+  Future<void> abandonQuizSession(int sessionId) async {
+    try {
+      String token = StorageService().authToken!;
+
+      await _client.put(
+        Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/$sessionId/abandon'),
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
+    } catch (e) {
+      print('Error abandoning quiz session: $e');
+      // Don't throw - this is best effort
+    }
+  }
+
+  /// Get quiz statistics for dashboard
+  Future<QuizStats> getQuizStats() async {
+    try {
+      String token = StorageService().authToken!;
+
+      final response = await _client.get(
+        Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/stats'),
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return QuizStats.fromJson(data['data']);
+      } else {
+        throw Exception('Failed to get quiz stats');
+      }
+    } on SocketException {
+      throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
+    } catch (e) {
+      throw Exception('Error getting quiz stats: $e');
+    }
+  }
+
+  /// Get quiz history
+  Future<List<QuizSession>> getQuizHistory({int page = 1}) async {
+    try {
+      String token = StorageService().authToken!;
+
+      final response = await _client.get(
+        Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/history?page=$page'),
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final sessions = (data['data']['data'] as List)
+            .map((session) => QuizSession.fromJson(session))
+            .toList();
+        return sessions;
+      } else {
+        throw Exception('Failed to get quiz history');
+      }
+    } on SocketException {
+      throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
+    } catch (e) {
+      throw Exception('Error getting quiz history: $e');
+    }
   }
 
   // ==================== DASHBOARD METHODS ====================
@@ -666,6 +785,8 @@ class ApiService {
       }
     } on SocketException {
       throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } on HttpException {
       throw Exception('Network error occurred');
     } catch (e) {
@@ -695,10 +816,52 @@ class ApiService {
       }
     } on SocketException {
       throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } on HttpException {
       throw Exception('Network error occurred');
     } catch (e) {
       throw Exception('Error fetching weak words: $e');
+    }
+  }
+
+  /// Fetch calendar heatmap data
+  Future<CalendarHeatmapData> fetchCalendarHeatmapData({
+    required int year,
+    required int month,
+  }) async {
+    try {
+      String token = StorageService().authToken!;
+      final uri =
+          Uri.parse('${ApiConstants.baseUrl}/dashboard/calendar-heatmap')
+              .replace(
+        queryParameters: {
+          'month': month.toString(),
+          'year': year.toString(),
+        },
+      );
+
+      final response = await _client.get(
+        uri,
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return CalendarHeatmapData.fromJson(data['data'] ?? {});
+      } else {
+        throw Exception(
+            'Failed to load calendar heatmap: ${response.statusCode}');
+      }
+    } on SocketException {
+      throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
+    } catch (e) {
+      throw Exception('Error fetching calendar heatmap: $e');
     }
   }
 
@@ -721,6 +884,10 @@ class ApiService {
       } else {
         throw Exception('Failed to load profile: ${response.statusCode}');
       }
+    } on SocketException {
+      throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } catch (e) {
       throw Exception('Error fetching profile: $e');
     }
@@ -764,6 +931,16 @@ class ApiService {
           message: jsonData['message'] ?? 'Update failed',
         );
       }
+    } on SocketException {
+      return const ApiResponse(
+        success: false,
+        message: 'No internet connection',
+      );
+    } on TimeoutException {
+      return const ApiResponse(
+        success: false,
+        message: 'Connection timeout',
+      );
     } catch (e) {
       return ApiResponse(
         success: false,
@@ -809,6 +986,16 @@ class ApiService {
           message: jsonData['message'] ?? 'Avatar update failed',
         );
       }
+    } on SocketException {
+      return const ApiResponse(
+        success: false,
+        message: 'No internet connection',
+      );
+    } on TimeoutException {
+      return const ApiResponse(
+        success: false,
+        message: 'Connection timeout',
+      );
     } catch (e) {
       return ApiResponse(
         success: false,
@@ -853,6 +1040,16 @@ class ApiService {
           message: jsonData['message'] ?? 'Password change failed',
         );
       }
+    } on SocketException {
+      return const ApiResponse(
+        success: false,
+        message: 'No internet connection',
+      );
+    } on TimeoutException {
+      return const ApiResponse(
+        success: false,
+        message: 'Connection timeout',
+      );
     } catch (e) {
       return ApiResponse(
         success: false,
@@ -891,6 +1088,16 @@ class ApiService {
           message: jsonData['message'] ?? 'Account deletion failed',
         );
       }
+    } on SocketException {
+      return const ApiResponse(
+        success: false,
+        message: 'No internet connection',
+      );
+    } on TimeoutException {
+      return const ApiResponse(
+        success: false,
+        message: 'Connection timeout',
+      );
     } catch (e) {
       return ApiResponse(
         success: false,
@@ -899,206 +1106,9 @@ class ApiService {
     }
   }
 
-  /// Start a new quiz session
-  Future<int> startQuizSession({
-    required String testType,
-    required int difficulty,
-    required int totalQuestions,
-  }) async {
-    try {
-      String token = StorageService().authToken!;
+  // ==================== NOTIFICATION METHODS ====================
 
-      final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/start'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'test_type': testType,
-          'difficulty': difficulty,
-          'total_questions': totalQuestions,
-        }),
-      );
-
-      if (response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        //print('Started quiz session: ${data['data']}');
-        return data['data']['session_id'];
-      } else {
-        throw Exception('Failed to start quiz session');
-      }
-    } catch (e) {
-      print('Error starting quiz session: $e');
-      rethrow;
-    }
-  }
-
-  /// Finish quiz session with results
-  Future<void> finishQuizSession({
-    required int sessionId,
-    required int correctCount,
-    required int incorrectCount,
-    required int totalTimeSeconds,
-  }) async {
-    try {
-      String token = StorageService().authToken!;
-
-      final response = await http.put(
-        Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/$sessionId/finish'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'correct_count': correctCount,
-          'incorrect_count': incorrectCount,
-          'total_time_seconds': totalTimeSeconds,
-        }),
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed to finish quiz session');
-      }
-    } catch (e) {
-      print('Error finishing quiz session: $e');
-      rethrow;
-    }
-  }
-
-  /// Abandon quiz session
-  Future<void> abandonQuizSession(int sessionId) async {
-    try {
-      String token = StorageService().authToken!;
-
-      await http.put(
-        Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/$sessionId/abandon'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
-    } catch (e) {
-      print('Error abandoning quiz session: $e');
-      // Don't throw - this is best effort
-    }
-  }
-
-  /// Get quiz statistics for dashboard
-  Future<QuizStats> getQuizStats() async {
-    try {
-      String token = StorageService().authToken!;
-
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/stats'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return QuizStats.fromJson(data['data']);
-      } else {
-        throw Exception('Failed to get quiz stats');
-      }
-    } catch (e) {
-      print('Error getting quiz stats: $e');
-      rethrow;
-    }
-  }
-
-  /// Get quiz history
-  Future<List<QuizSession>> getQuizHistory({int page = 1}) async {
-    try {
-      String token = StorageService().authToken!;
-
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/quiz-sessions/history?page=$page'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final sessions = (data['data']['data'] as List)
-            .map((session) => QuizSession.fromJson(session))
-            .toList();
-        return sessions;
-      } else {
-        throw Exception('Failed to get quiz history');
-      }
-    } catch (e) {
-      print('Error getting quiz history: $e');
-      rethrow;
-    }
-  }
-
-  Future<CalendarHeatmapData> fetchCalendarHeatmapData({
-    year,
-    month,
-  }) async {
-    try {
-      String token = StorageService().authToken!;
-      final uri =
-          Uri.parse('${ApiConstants.baseUrl}/dashboard/calendar-heatmap')
-              .replace(
-        queryParameters: {
-          'month': month.toString(),
-          'year': year.toString(),
-        },
-      );
-
-      final response = await _client.get(
-        uri,
-        headers: {
-          ...ApiConstants.defaultHeaders,
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(ApiConstants.connectTimeout);
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return CalendarHeatmapData.fromJson(data['data'] ?? {});
-        // print('Calendar heatmap data: $data');
-        //return CalendarHeatmapData.fromJson(data['data'] ?? {});
-      } else {
-        throw Exception('Failed to load vocabulary: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error fetching vocabulary: $e');
-    }
-  }
-
-  // Future<CalendarHeatmapData> getCalendarHeatmap({
-  //   required int year,
-  //   required int month,
-  // }) async {
-  //   String token = StorageService().authToken!;
-  //   final uri =
-  //       Uri.parse('${ApiConstants.baseUrl}/dashboard/calendar-heatmap').replace(
-  //     queryParameters: {
-  //       'year': year,
-  //       'month': month,
-  //     },
-  //   );
-  //   print('Fetching calendar heatmap from $uri');
-  //   final response = await _client.get(
-  //     uri,
-  //     headers: {
-  //       ...ApiConstants.defaultHeaders,
-  //       'Authorization': 'Bearer $token',
-  //     },
-  //   ).timeout(ApiConstants.connectTimeout);
-  //   print('Calendar API Response: ${response.body}');
-  //   if (response.statusCode == 200) {
-  //     final data = json.decode(response.body);
-  //     print('Calendar heatmap data: $data');
-  //     return CalendarHeatmapData.fromJson(data['data'] ?? {});
-  //   } else {
-  //     throw Exception('Failed to load calendar heatmap');
-  //   }
-  // }
-
+  /// Save FCM token
   Future<ApiResponse<void>> saveFCMToken({required String token}) async {
     try {
       final deviceType = Platform.isIOS ? 'ios' : 'android';
@@ -1126,11 +1136,20 @@ class ApiService {
         final jsonData = json.decode(response.body);
         return ApiResponse(
           success: false,
-          message: jsonData['message'] ?? 'Password change failed',
+          message: jsonData['message'] ?? 'Failed to save FCM token',
         );
       }
+    } on SocketException {
+      return const ApiResponse(
+        success: false,
+        message: 'No internet connection',
+      );
+    } on TimeoutException {
+      return const ApiResponse(
+        success: false,
+        message: 'Connection timeout',
+      );
     } catch (e) {
-      print('Error saving FCM token: $e');
       return ApiResponse(
         success: false,
         message: 'Error saving FCM token: $e',
@@ -1138,7 +1157,7 @@ class ApiService {
     }
   }
 
-  // Get notifications
+  /// Get notifications
   Future<NotificationResponse> getNotifications({
     int page = 1,
     String? type,
@@ -1151,6 +1170,7 @@ class ApiService {
           if (type != null) 'type': type,
         },
       );
+
       final response = await _client.get(
         uri,
         headers: {
@@ -1158,20 +1178,23 @@ class ApiService {
           'Authorization': 'Bearer $token',
         },
       ).timeout(ApiConstants.connectTimeout);
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return NotificationResponse.fromJson(data['data'] ?? {});
-        // print('Calendar heatmap data: $data');
-        //return CalendarHeatmapData.fromJson(data['data'] ?? {});
       } else {
-        throw Exception('Failed to load notification: ${response.statusCode}');
+        throw Exception('Failed to load notifications: ${response.statusCode}');
       }
+    } on SocketException {
+      throw Exception('No internet connection');
+    } on TimeoutException {
+      throw Exception('Connection timeout');
     } catch (e) {
-      throw Exception('Error fetching notification: $e');
+      throw Exception('Error fetching notifications: $e');
     }
   }
 
-// Get unread count
+  /// Get unread notification count
   Future<int> getUnreadNotificationCount() async {
     try {
       String token = StorageService().authToken!;
@@ -1185,87 +1208,222 @@ class ApiService {
           'Authorization': 'Bearer $token',
         },
       ).timeout(ApiConstants.connectTimeout);
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success']) {
-          return data['count'];
+          return data['count'] ?? 0;
         }
         return 0;
       } else {
-        throw Exception('Failed to load notification: ${response.statusCode}');
+        throw Exception(
+            'Failed to load notification count: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('Error fetching notification: $e');
+      return 0; // Return 0 on error instead of throwing
     }
   }
 
-// Mark as read
+  /// Mark notification as read
   Future<void> markNotificationAsRead({
     required int notificationId,
   }) async {
     try {
       String token = StorageService().authToken!;
       await _client.put(
-          Uri.parse(
-              '${ApiConstants.baseUrl}/notifications/$notificationId/read'),
-          headers: {
-            ...ApiConstants.defaultHeaders,
-            'Authorization': 'Bearer $token',
-          }).timeout(ApiConstants.connectTimeout);
+        Uri.parse('${ApiConstants.baseUrl}/notifications/$notificationId/read'),
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
     } catch (e) {
       throw Exception('Error marking notification as read: $e');
     }
   }
 
-// Mark all as read
+  /// Mark all notifications as read
   Future<void> markAllNotificationsAsRead() async {
     try {
       String token = StorageService().authToken!;
       await _client.put(
-          Uri.parse('${ApiConstants.baseUrl}/notifications/read-all'),
-          headers: {
-            ...ApiConstants.defaultHeaders,
-            'Authorization': 'Bearer $token',
-          }).timeout(ApiConstants.connectTimeout);
+        Uri.parse('${ApiConstants.baseUrl}/notifications/read-all'),
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
     } catch (e) {
-      throw Exception('Error marking notification as read: $e');
+      throw Exception('Error marking all notifications as read: $e');
     }
   }
 
-// Delete notification
+  /// Delete notification
   Future<void> deleteNotification({
     required int notificationId,
   }) async {
     try {
       String token = StorageService().authToken!;
       await _client.delete(
-          Uri.parse('${ApiConstants.baseUrl}/notifications/$notificationId'),
-          headers: {
-            ...ApiConstants.defaultHeaders,
-            'Authorization': 'Bearer $token',
-          }).timeout(ApiConstants.connectTimeout);
+        Uri.parse('${ApiConstants.baseUrl}/notifications/$notificationId'),
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
     } catch (e) {
       throw Exception('Error deleting notification: $e');
     }
   }
 
-// Delete all notifications
+  /// Delete all notifications
   Future<void> deleteAllNotifications() async {
     try {
       String token = StorageService().authToken!;
-      await _client
-          .delete(Uri.parse('${ApiConstants.baseUrl}/notifications'), headers: {
-        ...ApiConstants.defaultHeaders,
-        'Authorization': 'Bearer $token',
-      }).timeout(ApiConstants.connectTimeout);
+      await _client.delete(
+        Uri.parse('${ApiConstants.baseUrl}/notifications'),
+        headers: {
+          ...ApiConstants.defaultHeaders,
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
     } catch (e) {
-      throw Exception('Error deleting notification: $e');
+      throw Exception('Error deleting all notifications: $e');
+    }
+  }
+
+  // ==================== PRIVATE HELPER METHODS ====================
+
+  /// Unified handler for authentication responses (login and register)
+  ApiResponse<LoginResponse> _handleAuthResponse(
+    http.Response response, {
+    required bool isLogin,
+  }) {
+    try {
+      final responseData = json.decode(response.body);
+
+      switch (response.statusCode) {
+        case 200: // Login success
+          if (isLogin) {
+            final loginResponse = LoginResponse.fromJson(responseData);
+            return ApiResponse(
+              success: true,
+              data: loginResponse,
+              message: responseData['message'],
+              statusCode: response.statusCode,
+            );
+          }
+          return ApiResponse(
+            success: true,
+            message: responseData['message'] ?? 'Request successful',
+            statusCode: response.statusCode,
+          );
+
+        case 201: // Registration success
+          if (!isLogin) {
+            // Registration successful - account created but not activated
+            return ApiResponse(
+              success: true,
+              message: responseData['message'] ??
+                  'Registration successful! Please check your email.',
+              statusCode: response.statusCode,
+            );
+          }
+          final loginResponse = LoginResponse.fromJson(responseData);
+          return ApiResponse(
+            success: true,
+            data: loginResponse,
+            message: responseData['message'],
+            statusCode: response.statusCode,
+          );
+
+        case 401: // Unauthorized - Invalid credentials
+          return ApiResponse(
+            success: false,
+            message: responseData['message'] ??
+                responseData['error'] ??
+                'Invalid email or password.',
+            statusCode: response.statusCode,
+          );
+
+        case 403: // Forbidden - Account pending activation
+          return ApiResponse(
+            success: false,
+            message: responseData['error'] ??
+                responseData['message'] ??
+                'Account pending activation. Please check your email.',
+            statusCode: response.statusCode,
+          );
+
+        case 422: // Validation Error
+          String errorMessage = 'Validation failed.';
+
+          if (responseData['errors'] != null) {
+            final errors = responseData['errors'] as Map<String, dynamic>;
+            final firstError = errors.values.first;
+            if (firstError is List && firstError.isNotEmpty) {
+              errorMessage = firstError.first.toString();
+            }
+          } else if (responseData['message'] != null) {
+            errorMessage = responseData['message'];
+          } else if (responseData['error'] != null) {
+            errorMessage = responseData['error'];
+          }
+
+          return ApiResponse(
+            success: false,
+            message: errorMessage,
+            statusCode: response.statusCode,
+          );
+
+        case 429: // Too Many Requests
+          return ApiResponse(
+            success: false,
+            message: responseData['message'] ??
+                'Too many requests. Please try again later.',
+            statusCode: response.statusCode,
+          );
+
+        case 500: // Internal Server Error
+          return ApiResponse(
+            success: false,
+            message: responseData['message'] ??
+                'Server error. Please try again later.',
+            statusCode: response.statusCode,
+          );
+
+        case 503: // Service Unavailable
+          return const ApiResponse(
+            success: false,
+            message: 'Service temporarily unavailable. Please try again later.',
+            statusCode: 503,
+          );
+
+        default:
+          return ApiResponse(
+            success: false,
+            message: responseData['message'] ??
+                responseData['error'] ??
+                'Request failed. Please try again.',
+            statusCode: response.statusCode,
+          );
+      }
+    } on FormatException {
+      return const ApiResponse(
+        success: false,
+        message: 'Failed to parse server response.',
+      );
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Error processing response: ${e.toString()}',
+      );
     }
   }
 
   // ==================== CLEANUP ====================
 
-  // Dispose method for cleanup
+  /// Dispose method for cleanup
   void dispose() {
     _client.close();
   }

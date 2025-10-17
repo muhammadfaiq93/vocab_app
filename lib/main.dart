@@ -28,7 +28,6 @@ void main() async {
   } catch (e) {
     print('❌ Firebase initialization failed: $e');
   }
-  // WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize storage
   await StorageService().initialize();
@@ -81,7 +80,7 @@ class MyApp extends StatelessWidget {
                   : ThemeMode.light,
               home: AuthChecker(),
               routes: {
-                AppRoutes.splashScreen: (context) => SplashScreen(),
+                AppRoutes.login: (context) => LoginScreen(),
               },
             );
           },
@@ -91,34 +90,46 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthChecker extends StatelessWidget {
+class AuthChecker extends StatefulWidget {
+  @override
+  _AuthCheckerState createState() => _AuthCheckerState();
+}
+
+class _AuthCheckerState extends State<AuthChecker> {
+  bool _isInitialCheck = true;
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
-        // Optional: Add debug prints
         print('🔍 Auth State: ${state.runtimeType}');
+
+        // After initial check, set flag to false
+        if (_isInitialCheck && state is! AuthInitial) {
+          setState(() {
+            _isInitialCheck = false;
+          });
+        }
       },
       builder: (context, state) {
-        if (state is AuthInitial) {
-          // App just started, checking auth status
+        // Show splash screen only during initial app load
+        if (_isInitialCheck && (state is AuthInitial || state is AuthLoading)) {
           return SplashScreen();
-        } else if (state is AuthLoading) {
-          // Loading state (login/register/logout in progress)
-          return SplashScreen();
-        } else if (state is AuthAuthenticated) {
-          // User is logged in
+        }
+
+        // After initial load, handle states
+        if (state is AuthAuthenticated) {
           print('✅ User authenticated - showing Dashboard');
           return ProgressDashboard();
-        } else if (state is AuthUnauthenticated) {
-          // User is logged out or not logged in
+        } else if (state is AuthUnauthenticated || state is AuthError) {
           print('✅ User unauthenticated - showing LoginScreen');
           return LoginScreen();
-        } else if (state is AuthError) {
-          // Error state - show login with error
+        } else if (state is AuthLoading) {
+          // During login/register operations, stay on current screen
+          // LoginScreen will show its own loading indicator
           return LoginScreen();
         } else {
-          // Fallback - show login
+          // Fallback
           return SplashScreen();
         }
       },

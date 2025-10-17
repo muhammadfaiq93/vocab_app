@@ -8,7 +8,6 @@ import '../blocs/auth/auth_state.dart';
 import '../widgets/custom_text_field.dart';
 import '../utils/validators.dart';
 import '../utils/app_routes.dart';
-import 'progress_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -22,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _ageController = TextEditingController();
   bool _isRegister = false;
   bool _obscurePassword = true;
+  bool _isRegistering = false; // Track if we're in registration flow
 
   @override
   void dispose() {
@@ -37,18 +37,36 @@ class _LoginScreenState extends State<LoginScreen> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthError) {
-          // Show error message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-            ),
-          );
+          // If error during registration, don't show success dialog
+          if (_isRegistering) {
+            _isRegistering = false;
+            // Check if it's an account activation error
+            if (state.message.toLowerCase().contains('pending') ||
+                state.message.toLowerCase().contains('activation') ||
+                state.message.toLowerCase().contains('check your email')) {
+              _showAccountPendingDialog(context);
+            } else if (!state.message.toLowerCase().contains('exists')) {
+              // Don't show error if user already exists, show success dialog instead
+              _showErrorSnackBar(state.message);
+            }
+          } else {
+            // Login error - check if account needs activation
+            if (state.message.toLowerCase().contains('pending') ||
+                state.message.toLowerCase().contains('activation') ||
+                state.message.toLowerCase().contains('check your email')) {
+              _showAccountPendingDialog(context);
+            } else {
+              _showErrorSnackBar(state.message);
+            }
+          }
+        } else if (state is AuthAuthenticated) {
+          // Only navigate if user is actually authenticated (login success)
+          Navigator.pushReplacementNamed(context, AppRoutes.progressDashboard);
+        } else if (state is AuthUnauthenticated && _isRegistering) {
+          // Registration completed successfully - show email dialog
+          _isRegistering = false;
+          _showRegistrationSuccessDialog(context);
         }
-        // } else if (state is AuthAuthenticated) {
-        //   // Navigate to home screen on successful login/registration
-        //   Navigator.pushReplacementNamed(context, AppRoutes.progressDashboard);
-        // }
       },
       child: Scaffold(
         body: Container(
@@ -95,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-          SizedBox(width: 48), // Balance the back button
+          SizedBox(width: 48),
         ],
       ),
     );
@@ -163,7 +181,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildForm() {
     return Column(
       children: [
-        // Registration specific fields
         if (_isRegister) ...[
           CustomTextField(
             controller: _nameController,
@@ -181,8 +198,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           SizedBox(height: 20),
         ],
-
-        // Email field
         CustomTextField(
           controller: _emailController,
           label: AppStrings.emailAddress,
@@ -190,10 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
           hint: 'your.email@example.com',
           keyboardType: TextInputType.emailAddress,
         ),
-
         SizedBox(height: 20),
-
-        // Password field
         _buildPasswordField(),
       ],
     );
@@ -248,21 +260,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildSubmitButton() {
-    return BlocConsumer<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-        }
-      },
+    return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final isLoading = state is AuthLoading;
 
@@ -307,7 +305,6 @@ class _LoginScreenState extends State<LoginScreen> {
         onPressed: () {
           setState(() {
             _isRegister = !_isRegister;
-            // Clear form when switching
             _nameController.clear();
             _ageController.clear();
             _emailController.clear();
@@ -345,7 +342,6 @@ class _LoginScreenState extends State<LoginScreen> {
         Center(
           child: TextButton(
             onPressed: () {
-              // Demo login for testing
               _emailController.text = 'faiq@gmail.com';
               _passwordController.text = '123456';
             },
@@ -362,8 +358,267 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  void _showRegistrationSuccessDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Container(
+            padding: EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF10B981), Color(0xFF059669)],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.mark_email_read_outlined,
+                    color: Colors.white,
+                    size: 48,
+                  ),
+                ),
+                SizedBox(height: 24),
+                Text(
+                  'Check Your Email!',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'We\'ve sent you an important email with next steps to activate your account.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF6B7280),
+                    height: 1.5,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _emailController.text,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF3B82F6),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 24),
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Color(0xFFD97706), size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Please check your spam folder if you don\'t see it',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF92400E),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      setState(() {
+                        _isRegister = false;
+                        _nameController.clear();
+                        _ageController.clear();
+                        _emailController.clear();
+                        _passwordController.clear();
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF3B82F6),
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Got it!',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAccountPendingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Container(
+            padding: EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.hourglass_empty,
+                    color: Colors.white,
+                    size: 48,
+                  ),
+                ),
+                SizedBox(height: 24),
+                Text(
+                  'Account Pending',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Your account is not yet activated. Please check your email and follow the instructions we sent you to activate your account.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF6B7280),
+                    height: 1.5,
+                  ),
+                ),
+                SizedBox(height: 24),
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle,
+                              color: Color(0xFF10B981), size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Check your email inbox',
+                              style: TextStyle(
+                                  fontSize: 14, color: Color(0xFF374151)),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle,
+                              color: Color(0xFF10B981), size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Follow the activation link',
+                              style: TextStyle(
+                                  fontSize: 14, color: Color(0xFF374151)),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle,
+                              color: Color(0xFF10B981), size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Complete the activation process',
+                              style: TextStyle(
+                                  fontSize: 14, color: Color(0xFF374151)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF3B82F6),
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Understood',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _submitForm() {
-    // Validate required fields
     final validationError = _validateForm();
     if (validationError != null) {
       _showErrorSnackBar(validationError);
@@ -376,8 +631,15 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_isRegister) {
       final name = _nameController.text.trim();
       final age = int.tryParse(_ageController.text) ?? 0;
+
+      // Set flag to show success dialog after registration
+      setState(() {
+        _isRegistering = true;
+      });
+
       context.read<AuthBloc>().add(
           AuthRegister(name: name, email: email, password: password, age: age));
+      _isRegister = false;
     } else {
       context.read<AuthBloc>().add(AuthLogin(email: email, password: password));
     }
@@ -413,9 +675,19 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.white),
+            SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Color(0xFFEF4444),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: EdgeInsets.all(16),
       ),
     );
   }
