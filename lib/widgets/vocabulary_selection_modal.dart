@@ -58,9 +58,9 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal>
 
   final List<Map<String, dynamic>> ranges = [
     {'min': 1, 'max': 10, 'label': '1-10 words', 'icon': Icons.star},
-    {'min': 10, 'max': 20, 'label': '10-20 words', 'icon': Icons.stars},
-    {'min': 20, 'max': 30, 'label': '20-30 words', 'icon': Icons.auto_awesome},
-    {'min': 30, 'max': 40, 'label': '30-40 words', 'icon': Icons.emoji_events},
+    {'min': 11, 'max': 20, 'label': '11-20 words', 'icon': Icons.stars},
+    {'min': 21, 'max': 30, 'label': '21-30 words', 'icon': Icons.auto_awesome},
+    {'min': 31, 'max': 40, 'label': '31-40 words', 'icon': Icons.emoji_events},
   ];
 
   @override
