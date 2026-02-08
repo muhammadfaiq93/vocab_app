@@ -4,6 +4,7 @@ import '../blocs/auth/auth_bloc.dart';
 import '../blocs/auth/auth_state.dart';
 import '../services/api_service.dart';
 import '../models/vocabulary_card.dart';
+import 'dart:convert';
 
 class DynamicLearningScreen extends StatefulWidget {
   final int wordCount;
@@ -417,6 +418,10 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Image section - beautiful display
+          if (card.image != null && card.image!.isNotEmpty)
+            _buildImageSection(card.image!, isTablet),
+
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -948,5 +953,312 @@ class _DynamicLearningScreenState extends State<DynamicLearningScreen> {
         duration: Duration(seconds: 2),
       ),
     );
+  }
+
+  Widget _buildImageSection(String base64Image, bool isTablet) {
+    try {
+      // Decode base64 image
+      final imageBytes = base64.decode(base64Image);
+
+      return Container(
+        margin: EdgeInsets.only(bottom: 16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xFF6366F1).withOpacity(0.2),
+                  blurRadius: 15,
+                  offset: Offset(0, 4),
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: GestureDetector(
+              onTap: () => _showFullImage(base64Image),
+              child: Stack(
+                children: [
+                  // Main image
+                  Image.memory(
+                    imageBytes,
+                    width: double.infinity,
+                    height: isTablet ? 280 : 220,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return _buildImagePlaceholder(isTablet);
+                    },
+                  ),
+                  // Gradient overlay for better aesthetics
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.1),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Image icon badge
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.image,
+                        color: Color(0xFF6366F1),
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                  // Tap to expand indicator (optional)
+                  Positioned(
+                    bottom: 12,
+                    right: 12,
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.zoom_in,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'Tap to expand',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      print('Error decoding image: $e');
+      return _buildImagePlaceholder(isTablet);
+    }
+  }
+
+  Widget _buildImagePlaceholder(bool isTablet) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 16),
+      height: isTablet ? 280 : 220,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF6366F1).withOpacity(0.1),
+            Color(0xFF8B5CF6).withOpacity(0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Color(0xFF6366F1).withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFF6366F1).withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.image_outlined,
+                color: Color(0xFF6366F1),
+                size: 48,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Visual Learning',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6366F1),
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Image not available',
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF9CA3AF),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFullImage(String base64Image) {
+    try {
+      final imageBytes = base64.decode(base64Image);
+
+      showDialog(
+        context: context,
+        barrierColor: Colors.black87,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.all(10),
+          child: Stack(
+            children: [
+              // Image with zoom capability
+              Center(
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.8,
+                    maxWidth: MediaQuery.of(context).size.width * 0.95,
+                  ),
+                  child: InteractiveViewer(
+                    panEnabled: true,
+                    minScale: 0.5,
+                    maxScale: 4.0,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.memory(
+                        imageBytes,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Close button
+              Positioned(
+                top: 40,
+                right: 20,
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.close,
+                      color: Color(0xFF6366F1),
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ),
+              // Instructions at the bottom
+              Positioned(
+                bottom: 40,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.pinch,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Pinch to zoom • Drag to pan',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white, size: 18),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Unable to display full image'),
+              ),
+            ],
+          ),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          margin: EdgeInsets.all(12),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 }

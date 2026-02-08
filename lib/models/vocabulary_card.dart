@@ -18,6 +18,7 @@ class VocabularyCard {
   final int totalAttempts;
   final String? createdAt;
   final String? updatedAt;
+  final String? image;
 
   VocabularyCard({
     required this.id,
@@ -37,6 +38,7 @@ class VocabularyCard {
     this.totalAttempts = 0,
     this.createdAt,
     this.updatedAt,
+    this.image,
   });
 
   factory VocabularyCard.fromJson(Map<String, dynamic> json) {
@@ -58,6 +60,7 @@ class VocabularyCard {
       totalAttempts: json['total_attempts'] ?? 0,
       createdAt: json['created_at'],
       updatedAt: json['updated_at'],
+      image: json['image'],
     );
   }
 
@@ -105,6 +108,7 @@ class VocabularyCard {
       'total_attempts': totalAttempts,
       'created_at': createdAt,
       'updated_at': updatedAt,
+      'image': image,
     };
   }
 }
