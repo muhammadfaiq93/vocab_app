@@ -53,9 +53,9 @@ class _QuizSelectionModalState extends State<QuizSelectionModal>
 
   final List<Map<String, dynamic>> ranges = [
     {'max': 10, 'label': '1-10 words', 'icon': Icons.star},
-    {'max': 20, 'label': '10-20 words', 'icon': Icons.stars},
-    {'max': 30, 'label': '20-30 words', 'icon': Icons.auto_awesome},
-    {'max': 40, 'label': '30-40 words', 'icon': Icons.emoji_events},
+    {'max': 20, 'label': '11-20 words', 'icon': Icons.stars},
+    {'max': 30, 'label': '21-30 words', 'icon': Icons.auto_awesome},
+    {'max': 40, 'label': '31-40 words', 'icon': Icons.emoji_events},
   ];
 
   final List<Map<String, dynamic>> testTypes = [

@@ -360,7 +360,7 @@ class _ProgressDashboardState extends State<ProgressDashboard> {
         SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
-            '${stats.accuracy}%',
+            '${stats.accuracy.toStringAsFixed(0)}%',
             'Accuracy',
             Icons.check_circle_outline,
             Color(0xFF10B981),
