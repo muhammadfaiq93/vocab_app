@@ -17,46 +17,61 @@ class _QuizSelectionModalState extends State<QuizSelectionModal>
     {
       'level': 1,
       'icon': '🌱',
-      'title': 'Beginner',
+      'title': 'Set 1',
       'color': Color(0xFF10B981),
       'gradient': [Color(0xFF10B981), Color(0xFF059669)],
     },
     {
       'level': 2,
       'icon': '🌿',
-      'title': 'Elementary',
+      'title': 'Set 2',
       'color': Color(0xFF3B82F6),
       'gradient': [Color(0xFF3B82F6), Color(0xFF2563EB)],
     },
     {
       'level': 3,
       'icon': '🌳',
-      'title': 'Intermediate',
+      'title': 'Set 3',
       'color': Color(0xFF6366F1),
       'gradient': [Color(0xFF6366F1), Color(0xFF4F46E5)],
     },
     {
       'level': 4,
       'icon': '🎯',
-      'title': 'Advanced',
+      'title': 'Set 4',
       'color': Color(0xFF8B5CF6),
       'gradient': [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
     },
     {
       'level': 5,
       'icon': '👑',
-      'title': 'Expert',
+      'title': 'Set 5',
       'color': Color(0xFFEC4899),
       'gradient': [Color(0xFFEC4899), Color(0xFFDB2777)],
     },
   ];
 
-  final List<Map<String, dynamic>> ranges = [
-    {'max': 10, 'label': '1-10 words', 'icon': Icons.star},
-    {'max': 20, 'label': '11-20 words', 'icon': Icons.stars},
-    {'max': 30, 'label': '21-30 words', 'icon': Icons.auto_awesome},
-    {'max': 40, 'label': '31-40 words', 'icon': Icons.emoji_events},
-  ];
+  /// Dynamically generate 4 ranges of 10 words based on the selected level.
+  /// Level 1 → 1–40, Level 2 → 41–80, Level 3 → 81–120, etc.
+  List<Map<String, dynamic>> getRangesForLevel(int level) {
+    final int baseStart = (level - 1) * 40 + 1; // 1, 41, 81, 121, 161
+    final List<IconData> icons = [
+      Icons.star,
+      Icons.stars,
+      Icons.auto_awesome,
+      Icons.emoji_events,
+    ];
+    return List.generate(4, (i) {
+      final int min = baseStart + (i * 10); // e.g. 1, 11, 21, 31
+      final int max = min + 9; // e.g. 10, 20, 30, 40
+      return {
+        'min': min,
+        'max': max,
+        'label': '$min-$max words',
+        'icon': icons[i],
+      };
+    });
+  }
 
   final List<Map<String, dynamic>> testTypes = [
     {
@@ -99,6 +114,11 @@ class _QuizSelectionModalState extends State<QuizSelectionModal>
 
   @override
   Widget build(BuildContext context) {
+    // Build ranges dynamically whenever a category is selected
+    final List<Map<String, dynamic>> ranges = selectedCategory != null
+        ? getRangesForLevel(categories[selectedCategory!]['level'])
+        : [];
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -130,14 +150,14 @@ class _QuizSelectionModalState extends State<QuizSelectionModal>
             _buildDifficultySection(),
             if (selectedCategory != null) ...[
               SizedBox(height: 16),
-              _buildRangeSection(),
+              _buildRangeSection(ranges),
             ],
             if (selectedCategory != null && selectedRange != null) ...[
               SizedBox(height: 16),
               _buildTestTypeSection(),
               SizedBox(height: 14),
             ],
-            _buildStartButton(),
+            _buildStartButton(ranges),
             SizedBox(height: 16),
           ],
         ),
@@ -205,7 +225,7 @@ class _QuizSelectionModalState extends State<QuizSelectionModal>
         children: [
           _buildHeader('1️⃣', 'Select Difficulty'),
           SizedBox(height: 12),
-          Container(
+          SizedBox(
             height: 120,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
@@ -219,7 +239,7 @@ class _QuizSelectionModalState extends State<QuizSelectionModal>
     );
   }
 
-  Widget _buildRangeSection() {
+  Widget _buildRangeSection(List<Map<String, dynamic>> ranges) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -227,7 +247,7 @@ class _QuizSelectionModalState extends State<QuizSelectionModal>
         children: [
           _buildHeader('2️⃣', 'How many words?'),
           SizedBox(height: 12),
-          ...List.generate(ranges.length, (i) => _buildRangeCard(i)),
+          ...List.generate(ranges.length, (i) => _buildRangeCard(i, ranges)),
         ],
       ),
     );
@@ -280,8 +300,8 @@ class _QuizSelectionModalState extends State<QuizSelectionModal>
     return GestureDetector(
       onTap: () => setState(() {
         selectedCategory = index;
-        selectedRange = null;
-        selectedTestType = null;
+        selectedRange = null; // Reset range on level change
+        selectedTestType = null; // Reset test type on level change
       }),
       child: AnimatedContainer(
         duration: Duration(milliseconds: 300),
@@ -344,7 +364,7 @@ class _QuizSelectionModalState extends State<QuizSelectionModal>
     );
   }
 
-  Widget _buildRangeCard(int index) {
+  Widget _buildRangeCard(int index, List<Map<String, dynamic>> ranges) {
     final range = ranges[index];
     final selected = selectedRange == index;
     final color = categories[selectedCategory!]['color'];
@@ -353,7 +373,7 @@ class _QuizSelectionModalState extends State<QuizSelectionModal>
       child: GestureDetector(
         onTap: () => setState(() {
           selectedRange = index;
-          selectedTestType = null;
+          selectedTestType = null; // Reset test type on range change
         }),
         child: AnimatedContainer(
           duration: Duration(milliseconds: 250),
@@ -504,7 +524,7 @@ class _QuizSelectionModalState extends State<QuizSelectionModal>
     );
   }
 
-  Widget _buildStartButton() {
+  Widget _buildStartButton(List<Map<String, dynamic>> ranges) {
     final canStart = selectedCategory != null &&
         selectedRange != null &&
         selectedTestType != null;
@@ -539,10 +559,13 @@ class _QuizSelectionModalState extends State<QuizSelectionModal>
                     _animationController.forward().then((_) {
                       _animationController.reverse();
                     });
+                    final range = ranges[selectedRange!];
                     Future.delayed(Duration(milliseconds: 150), () {
                       Navigator.pop(context, {
                         'difficulty': categories[selectedCategory!]['level'],
-                        'limit': ranges[selectedRange!]['max'],
+                        'start': range['min'],
+                        'end': range['max'],
+                        'limit': range['max'] - range['min'] + 1,
                         'testType': selectedTestType,
                       });
                     });

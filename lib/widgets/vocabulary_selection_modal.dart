@@ -17,7 +17,7 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal>
     {
       'level': 1,
       'icon': '🌱',
-      'title': 'Beginner',
+      'title': 'Set 1',
       'subtitle': 'Simple everyday words',
       'color': Color(0xFF10B981),
       'gradient': [Color(0xFF10B981), Color(0xFF059669)],
@@ -25,7 +25,7 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal>
     {
       'level': 2,
       'icon': '🌿',
-      'title': 'Elementary',
+      'title': 'Set 2',
       'subtitle': 'Building foundation',
       'color': Color(0xFF3B82F6),
       'gradient': [Color(0xFF3B82F6), Color(0xFF2563EB)],
@@ -33,7 +33,7 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal>
     {
       'level': 3,
       'icon': '🌳',
-      'title': 'Intermediate',
+      'title': 'Set 3',
       'subtitle': 'Challenge yourself',
       'color': Color(0xFF6366F1),
       'gradient': [Color(0xFF6366F1), Color(0xFF4F46E5)],
@@ -41,7 +41,7 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal>
     {
       'level': 4,
       'icon': '🎯',
-      'title': 'Advanced',
+      'title': 'Set 4',
       'subtitle': 'Master level',
       'color': Color(0xFF8B5CF6),
       'gradient': [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
@@ -49,19 +49,35 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal>
     {
       'level': 5,
       'icon': '👑',
-      'title': 'Expert',
+      'title': 'Set 5',
       'subtitle': 'Champion level',
       'color': Color(0xFFEC4899),
       'gradient': [Color(0xFFEC4899), Color(0xFFDB2777)],
     },
   ];
 
-  final List<Map<String, dynamic>> ranges = [
-    {'min': 1, 'max': 10, 'label': '1-10 words', 'icon': Icons.star},
-    {'min': 11, 'max': 20, 'label': '11-20 words', 'icon': Icons.stars},
-    {'min': 21, 'max': 30, 'label': '21-30 words', 'icon': Icons.auto_awesome},
-    {'min': 31, 'max': 40, 'label': '31-40 words', 'icon': Icons.emoji_events},
-  ];
+  /// Dynamically generate 4 ranges of 10 words based on the selected level.
+  /// Level 1 → 1-40, Level 2 → 41-80, Level 3 → 81-120, etc.
+  List<Map<String, dynamic>> getRangesForLevel(int level) {
+    final int baseStart = (level - 1) * 40 + 1; // 1, 41, 81, 121, 161
+    final List<IconData> icons = [
+      Icons.star,
+      Icons.stars,
+      Icons.auto_awesome,
+      Icons.emoji_events,
+    ];
+
+    return List.generate(4, (i) {
+      final int min = baseStart + (i * 10); // e.g. 1, 11, 21, 31
+      final int max = min + 9; // e.g. 10, 20, 30, 40
+      return {
+        'min': min,
+        'max': max,
+        'label': '$min - $max words',
+        'icon': icons[i],
+      };
+    });
+  }
 
   @override
   void initState() {
@@ -83,6 +99,11 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal>
 
   @override
   Widget build(BuildContext context) {
+    // Build ranges dynamically whenever a category is selected
+    final List<Map<String, dynamic>> ranges = selectedCategory != null
+        ? getRangesForLevel(categories[selectedCategory!]['level'])
+        : [];
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -192,7 +213,7 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal>
                     ],
                   ),
                   SizedBox(height: 12),
-                  Container(
+                  SizedBox(
                     height: 120,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
@@ -206,7 +227,8 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal>
                           onTap: () {
                             setState(() {
                               selectedCategory = index;
-                              selectedRange = null;
+                              selectedRange =
+                                  null; // Reset range on level change
                             });
                           },
                           child: AnimatedContainer(
@@ -290,7 +312,7 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal>
             ),
             SizedBox(height: 16),
 
-            // Range Selection
+            // Range Selection — only shown after a category is picked
             if (selectedCategory != null) ...[
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
@@ -386,15 +408,30 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal>
                                   ),
                                   SizedBox(width: 12),
                                   Expanded(
-                                    child: Text(
-                                      range['label'],
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: isSelected
-                                            ? Colors.white
-                                            : Color(0xFF1F2937),
-                                      ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          range['label'],
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Color(0xFF1F2937),
+                                          ),
+                                        ),
+                                        Text(
+                                          'Words ${range['min']} to ${range['max']}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: isSelected
+                                                ? Colors.white.withOpacity(0.8)
+                                                : Color(0xFF9CA3AF),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   if (isSelected)
@@ -463,16 +500,13 @@ class _VocabularySelectionModalState extends State<VocabularySelectionModal>
 
                             final category = categories[selectedCategory!];
                             final range = ranges[selectedRange!];
-                            final categoryStart =
-                                (category['level'] - 1) * 40 + 1;
-                            final wordCount = range['max'];
 
                             Future.delayed(Duration(milliseconds: 150), () {
                               Navigator.pop(context, {
                                 'difficulty': category['level'],
-                                'count': wordCount,
-                                'start': categoryStart,
-                                'end': categoryStart + wordCount - 1,
+                                'count': range['max'] - range['min'] + 1,
+                                'start': range['min'],
+                                'end': range['max'],
                                 'categoryName': category['title'],
                               });
                             });
